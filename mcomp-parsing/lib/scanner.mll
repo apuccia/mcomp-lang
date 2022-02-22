@@ -101,7 +101,7 @@ rule next_token = parse
   | '\n'          { Lexing.new_line lexbuf; next_token lexbuf }
   | eof           { EOF }
   | _             { 
-    (* check this solution for lexeme_pos *)
+    (* TODO: check this solution for lexeme_pos *)
     let init_pos = Lexing.lexeme_start_p lexbuf in
     let end_pos = Lexing.lexeme_end_p lexbuf in
     let sc = init_pos.pos_cnum - init_pos.pos_bol in
