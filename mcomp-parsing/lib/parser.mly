@@ -12,8 +12,7 @@
       | Comp of 'a component_decl
       | Conns of connection list
 
-    let make_node n f = 
-        {node = n; annot = f}
+    let (<@>) n f = {node = n; annot = f}
 %} 
 
 /* Token declarations */
@@ -86,8 +85,8 @@
 %nonassoc ">", "<", ">=", "<="
 %left "+", "-"
 %left "*", "/", "%" 
-%nonassoc "!", "&"
-%nonassoc "[", "."
+%nonassoc "!"//, "&"
+//%nonassoc "[", "."
 
 /* Start symbol */
 %start compilation_unit
@@ -113,23 +112,21 @@ top_declaration:
   | "interface" 
     i_name = ID 
     "{" i_m_decls = i_member_declaration+ "}"
-      { I(make_node (InterfaceDecl{iname = i_name; declarations = i_m_decls}) (to_code_position($startpos, $endpos))) }
+      { I(InterfaceDecl{iname = i_name; declarations = i_m_decls} <@> to_code_position($startpos, $endpos)) }
   | "component" 
     c_name = ID 
     p = provide_clause?
     u = use_clause?
     "{" defs = c_member_declaration+ "}"
-      { Comp(make_node (ComponentDecl{
-                            cname = c_name; 
-                            provides = Option.value p ~default:[]; 
-                            uses = Option.value u ~default:[]; 
-                            definitions = defs};) 
-                       (to_code_position($startpos, $endpos))) }
+      { Comp(ComponentDecl{
+                cname = c_name; 
+                provides = Option.value p ~default:[]; 
+                uses = Option.value u ~default:[]; 
+                definitions = defs} 
+            <@>
+            to_code_position($startpos, $endpos)) }
   | "connect" l = link ";"
       { Conns([l]) } 
-  /*| "connect" 
-    "{" l_list = terminated(link, ";")* "}"
-      { Conns(l_list) }*/
   | "connect" 
     "{" l_list = separated_list(";", link) "}"
       { Conns(l_list) }
@@ -142,22 +139,18 @@ link:
 
 i_member_declaration:
   | "var" vs = var_sign ";"
-      { make_node (VarDecl(vs)) (to_code_position($startpos, $endpos)) }
+      { VarDecl(vs) <@> to_code_position($startpos, $endpos) }
 
   | fp = fun_prototype ";"
-      { make_node (FunDecl(fp)) (to_code_position($startpos, $endpos)) }
+      { FunDecl(fp) <@> to_code_position($startpos, $endpos) }
 ;
 
 provide_clause:
-  /*| "provides" l_p = terminated(ID, ",")* last = ID
-      { l_p @ [last] }*/
     | "provides" p_l = separated_nonempty_list(",", ID)
       { p_l }
 ;
 
 use_clause:
-  /*| "uses" u_l = terminated(ID, ",")* last = ID
-      { u_l @ [last] }*/
     | "uses" u_l = separated_nonempty_list(",", ID)
       { u_l }
 ;
@@ -182,9 +175,9 @@ fun_prototype:
 
 c_member_declaration:
   | "var" vd = var_sign ";"
-      { make_node (VarDecl(vd)) (to_code_position($startpos, $endpos)) }
+      { VarDecl(vd) <@> to_code_position($startpos, $endpos) }
   | fd = fun_declaration
-      { make_node (FunDecl(fd)) (to_code_position($startpos, $endpos)) }
+      { FunDecl(fd) <@> to_code_position($startpos, $endpos) }
 ;
 
 fun_declaration:
@@ -199,14 +192,14 @@ fun_declaration:
 // inlining because block could be considered as an alias of delimited
 %inline block:
   | c = delimited("{", block_content*, "}")
-      { make_node (Block(c)) (to_code_position($startpos, $endpos)) }
+      { Block(c) <@> to_code_position($startpos, $endpos) }
 ;
 
 block_content:
   | s = stmt
-      { make_node (Stmt(s)) (to_code_position($startpos, $endpos)) }
+      { Stmt(s) <@> to_code_position($startpos, $endpos) }
   | "var" ld = var_sign ";"
-      { make_node (LocalDecl(ld)) (to_code_position($startpos, $endpos)) }
+      { LocalDecl(ld) <@> to_code_position($startpos, $endpos) }
 ;
 
 type_:
@@ -233,84 +226,82 @@ basic_type:
 
 stmt:
   | r = delimited("return", expr?, ";")
-      { make_node (Return(r)) (to_code_position($startpos, $endpos)) }
+      { Return(r) <@> to_code_position($startpos, $endpos) }
   | e = expr? ";"
-      /*{ 
-        let x = make_node (Skip) (to_code_position($startpos, $endpos)) in
-          make_node (Option.value e ~default:x) (to_code_position($startpos, $endpos)) 
-      }*/
-      {
-        match e with
-          | None -> make_node (Skip) (to_code_position($startpos, $endpos))
-          | Some v -> make_node (Expr(v)) (to_code_position($startpos, $endpos))
+      { 
+        (Option.value (Option.map (fun x -> Expr(x)) e) ~default:(Skip))
+            <@> 
+        to_code_position($startpos, $endpos)
       }
   | b = block
       { b }
   | "while" cond = delimited("(", expr, ")") b = stmt 
-      { make_node (While(cond, b)) (to_code_position($startpos, $endpos)) }
+      { While(cond, b) <@> to_code_position($startpos, $endpos) }
   | "if" cond = delimited("(", expr, ")") a = stmt "else" b = stmt 
-      { make_node (If(cond, a, b)) (to_code_position($startpos, $endpos)) }
+      { If(cond, a, b) <@> to_code_position($startpos, $endpos) }
   | "if" cond = delimited("(", expr, ")") a = stmt %prec then_prec
-      { let skip_node = make_node (Skip) (to_code_position($startpos, $endpos)) in 
-        make_node (If(cond, a, skip_node)) (to_code_position($startpos, $endpos))
+      { let skip_node = Skip <@> to_code_position($startpos, $endpos) in 
+        If(cond, a, skip_node) <@> to_code_position($startpos, $endpos)
     }
   | "for" "(" init = expr? ";" cond = expr? ";" step = expr? ")" body = stmt
       { 
         (* creating the statement for counter variable initialization *)
-        let i = match init with
-          | None -> make_node (Skip) (to_code_position($startpos, $endpos))
-          | Some v -> make_node (Expr(v)) (to_code_position($startpos, $endpos)) in
-        let stmt_i = make_node (Stmt(i)) (to_code_position($startpos, $endpos)) in
+        let i = 
+            (Option.value (Option.map (fun x -> Expr(x)) init) ~default:(Skip))
+                <@> 
+            to_code_position($startpos, $endpos) in
+        let stmt_i = Stmt(i) <@> to_code_position($startpos, $endpos) in
         (* creating condition expression *)
-        let c_expr = match cond with
-          | None -> make_node (BLiteral(true)) (to_code_position($startpos, $endpos))
-          | Some v -> v in
+        let c_expr = 
+            Option.value cond ~default:(BLiteral(true) <@> to_code_position($startpos, $endpos)) in
         (* creating the statement for counter modification *)
-        let s = match step with
-          | None -> make_node (Skip) (to_code_position($startpos, $endpos))
-          | Some v -> make_node (Expr(v)) (to_code_position($startpos, $endpos)) in
-        let stmt_s = make_node (Stmt(s)) (to_code_position($startpos, $endpos)) in
-        (* creating while body *)
-        let stmt_b = make_node (Stmt(body)) (to_code_position($startpos, $endpos)) in
-        let w_block = make_node (Block([stmt_b; stmt_s])) (to_code_position($startpos, $endpos)) in
-        let w = make_node (While(c_expr, w_block)) (to_code_position($startpos, $endpos)) in
-        let stmt_w = make_node (Stmt(w)) (to_code_position($startpos, $endpos)) in
+        let s = 
+            (Option.value (Option.map (fun x -> Expr(x)) step) ~default:(Skip))
+                <@> 
+            to_code_position($startpos, $endpos) in
+        let stmt_s = Stmt(s) <@> to_code_position($startpos, $endpos) in
+        (* creating while *)
+        let stmt_b = Stmt(body) <@> to_code_position($startpos, $endpos) in
+        let w_block = Block([stmt_b; stmt_s]) <@> to_code_position($startpos, $endpos) in
+        let w = While(c_expr, w_block) <@> to_code_position($startpos, $endpos) in
+        let stmt_w = Stmt(w) <@> to_code_position($startpos, $endpos) in
         (* creating final block composed of initialization and while *)
-        make_node (Block[stmt_i; stmt_w]) (to_code_position($startpos, $endpos)) 
+        Block[stmt_i; stmt_w] <@> to_code_position($startpos, $endpos)
       }
   ;
 
 expr:
   | i = T_INT
-      { make_node (ILiteral(Int32.to_int i)) (to_code_position($startpos, $endpos)) }
+      { ILiteral(Int32.to_int i) <@> to_code_position($startpos, $endpos) }
   | c = T_CHAR
-      { make_node (CLiteral(c)) (to_code_position($startpos, $endpos)) }
+      { CLiteral(c) <@> to_code_position($startpos, $endpos) }
   | b = T_BOOL
-      { make_node (BLiteral(b)) (to_code_position($startpos, $endpos)) }
+      { BLiteral(b) <@> to_code_position($startpos, $endpos) }
   | e = delimited("(", expr, ")")
       { e }
   | "&" addr = l_value
-      { make_node (Address(addr)) (to_code_position($startpos, $endpos)) }
+      { Address(addr) <@> to_code_position($startpos, $endpos) }
   | l = l_value "=" e = expr
-      { make_node (Assign(l, e)) (to_code_position($startpos, $endpos)) }
+      { Assign(l, e) <@> to_code_position($startpos, $endpos) }
   | "!" e = expr
-      { make_node (UnaryOp(Not, e)) (to_code_position($startpos, $endpos)) }
+      { UnaryOp(Not, e) <@> to_code_position($startpos, $endpos) }
   | fname = ID "(" args = separated_list(",", expr) ")"
-      { make_node (Call(None, fname, args)) (to_code_position($startpos, $endpos)) }
+      { Call(None, fname, args) <@> to_code_position($startpos, $endpos) }
   | l = l_value
-      { make_node (LV(l)) (to_code_position($startpos, $endpos)) }
+      { LV(l) <@> to_code_position($startpos, $endpos) }
   | "-" e = expr
-      { make_node (UnaryOp(Neg, e)) (to_code_position($startpos, $endpos)) }
+      { UnaryOp(Neg, e) <@> to_code_position($startpos, $endpos) }
   | e1 = expr b = bin_op e2 = expr
-      { make_node (BinaryOp(b, e1, e2)) (to_code_position($startpos, $endpos)) }
+      { BinaryOp(b, e1, e2) <@> to_code_position($startpos, $endpos) }
 ;
 
 l_value:
   | id = ID 
-      { make_node (AccVar(None, id)) (to_code_position($startpos, $endpos)) }
-  // TODO: try to understand how to do this
-  | id = ID "[" expr "]"
-      { make_node (AccVar(None, id)) (to_code_position($startpos, $endpos)) }
+      { AccVar(None, id) <@> to_code_position($startpos, $endpos) }
+  | id = ID "[" e = expr "]"
+      { AccIndex(AccVar(None, id) <@> to_code_position($startpos, $endpos), e) 
+          <@> 
+        to_code_position($startpos, $endpos) }
 
 %inline bin_op:
   | "+"
