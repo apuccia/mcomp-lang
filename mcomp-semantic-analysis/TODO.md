@@ -1,0 +1,37 @@
+## Semantic rules TODOs
+- [ ] Interfaces and components define their own scope.
+- [ ] Interfaces and components cannot be nested.
+- [ ] There is a global scope that contains interface and component declarations.
+- [ ] The declarations inside the global scope are mutually recursive.
+- [ ] A component must implement all the members defined in the interfaces it provides (the types of the members must be the same).
+- [ ] The declarations inside a component are mutually recursive.
+- [ ] The interfaces used by a component must not lead to *ambiguous* names, i.e. names provided by different used interfaces.
+- [ ] A component can only provides and uses interfaces.
+- [ ] The name of an interface must occur only once in a `provides` and `uses` list.
+- [ ] A component may provide two interfaces that have members with the same name as long as these members have the same type.
+- [ ] Block can be nested and the declaration of a variable `x` in a inner block hides possible declarations in outer blocks.
+- [ ] Functions cannot be nested.
+- [ ] No function overloading.
+- [ ] The interface `App` can be provided by only one component and never used.
+- [ ] There exists a `Prelude` component that provides two library functions to perform I/O operations: *print(v : int)* and *getint() : int*. The `Prelude` interface is implicitly used by all components, and it cannot be provided by any component. 
+
+## Typing rules TODOs
+- [ ] Booleans and characters cannot be converted to integers.
+- [ ] References to arrays and references to scalars are different types.
+- [ ] Arithmetic operators expect only integer values.
+- [ ] Logical operators expect only boolean values.
+- [ ] In `a[i]` we expect `a` to be an array or a reference to an array and `i` to be an integer value.
+- [ ] Only functions can be invoked.
+- [ ] A function call must provides a number of arguments equals to the parameters of the function.
+- [ ] Conditional guards in `if`, `while` and `for` statements expect boolean values.
+- [ ] Array should have a size of at least 1 element.
+- [ ] Array cannot be assigned, i.e., `array1 = array2` is not allowed.
+- [ ] Array references can occur only as formal parameters.
+- [ ] Variables of type `void` are not allowed.
+- [ ] References `T&` requires that `T` is a scalar type.
+- [ ] Currently, functions can only return `int`, `bool`, `char` and `void`.
+- [ ] Multi-dimensional arrays are not supported.
+- [ ] References `T&` supports automatic dereference: when a reference does not occur in the left hand-side of an assignment, it is automatically dereferenced and its type is `T`.
+- [ ] When a reference `x` of type `T&` is on the left hand-side of an assignment, the semantics of the assignment depends on the type of the expression `e` on right hand-side: 
+  - [ ] If `e` has type `T&`, the assignment is well typed and its execution changes the address `x` points to with the address resulting from the evaluation of `e`.
+  - [ ] If `e` has type `T`, the assignment is well typed and its evaluation modifies the memory location pointed by `x` with the result of `e`.
