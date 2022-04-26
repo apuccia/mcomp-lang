@@ -1,7 +1,6 @@
 /**
  mComp parser specification 
  */
-// TODO: verify all the grammar
 %{
     (* Here code *)  
     open Ast
@@ -75,7 +74,6 @@
 %token EOF
 
 /* Precedence and associativity specification */
-// TODO: check this precedence, also ".", "[" and "&" are never useful precedences 
 %nonassoc then_prec
 %nonassoc "else"
 %right "="
@@ -85,8 +83,7 @@
 %nonassoc ">", "<", ">=", "<="
 %left "+", "-"
 %left "*", "/", "%" 
-%nonassoc "!"//, "&"
-//%nonassoc "[", "."
+%nonassoc "!"
 
 /* Start symbol */
 %start compilation_unit

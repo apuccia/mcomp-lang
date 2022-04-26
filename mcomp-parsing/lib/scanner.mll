@@ -111,13 +111,12 @@ rule next_token = parse
   | '\n'          { printf "Recognized \\n\n"; Lexing.new_line lexbuf; next_token lexbuf }
   | eof           { EOF }
   | _             { 
-    (* TODO: check this solution for lexeme_pos *)
     let init_pos = Lexing.lexeme_start_p lexbuf in
     let end_pos = Lexing.lexeme_end_p lexbuf in
     let sc = init_pos.pos_cnum - init_pos.pos_bol in
     let ec = end_pos.pos_cnum - end_pos.pos_bol in
     raise (Lexing_error (generate_pos init_pos.pos_lnum sc ec, "Unexpected character: " ^ (Lexing.lexeme lexbuf))) }
-and inline_comment = parse (* ignore other nested comments *)
+and inline_comment = parse
   | '\n'          { printf "Finished recognizing inline comment\n"; next_token lexbuf }
   | _             { inline_comment lexbuf }
 and block_comment = parse (* ignore other nested comments *)
