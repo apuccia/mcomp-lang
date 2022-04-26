@@ -1,0 +1,32 @@
+## Scanner and parser assignment TODOs 
+
+- [x] Identifiers have to start with a letter or an underscore and then can contain letters, underscore and numbers.
+- [ ] Identifiers have a max length of 64 characters.
+- [x] Names have to follow the *camel case* notation:
+  - [x] *lower camel case* have to be used for variables and functions.
+  - [x] *upper camel case* have to be used for components and interfaces
+- [x] Integer literals implemented as sequence of digits (32 bits):
+  - [x] in base 10 *or*.
+  - [x] in base 16 prefixed with `0x`.
+- [x] Character literals have the form `'c'` where c is a character.
+- [x] Special characters are: `\'`,`\b`, `\f`, `\t`, `\\`, `\r`, and `\n`.
+- [x] Boolean literals are `true` and `false`.
+- [x] Keywords are: `var`, `if`, `return`, `else`, `while`, `int`, `char`, `void`, `bool`, `interface`, `uses`, `provides`, `component`, `connect`, `def`, `for`.
+- [x] Operators are: &,  +, -, *, /, %,  =, ==, !=, <, <=, >, >=, &&, ||, !.
+- [x] Other symbols: (, ), {, }, [, ], ., <-, :.
+- [x] Comments:
+  - [x] `//...` single line comments.
+  - [x] `/* ... */` multi line comments (no nesting).
+- [x] Precedence and associativity rules (lowest to highest):
+  - right    =             
+  - left     ||
+  - left     &&
+  - left     ==  != 
+  - nonassoc >  <  >=  <=
+  - left     +  - 
+  - left     *  /  %
+  - nonassoc !  &
+  - nonassoc [  .   
+- [x] Grammar ambiguities:
+  - [x] *if-else* shift-reduce conflict -> solved using two new precedence rules (give precedence to shifting else).
+  - [x] binary operations shift-reduce conflicts -> solved by using menhir inlining.
