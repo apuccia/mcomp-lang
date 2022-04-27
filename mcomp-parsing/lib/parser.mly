@@ -5,12 +5,28 @@
   open Ast
   open Location
 
+  exception Camelcase_error of lexeme_pos * string
+
   type 'a program_element = 
   | I of 'a interface_decl
   | Comp of 'a component_decl
   | Conns of connection list
 
   let (<@>) n f = {node = n; annot = f}
+
+  let is_upper c =
+    match c with 
+    | 'A' .. 'Z' -> true 
+    | _ -> false
+
+  let notation_error spos epos msg =
+    let pos = to_code_position(spos, epos) in 
+      raise (
+        Camelcase_error (
+          { 
+            line = pos.start_line; 
+            start_column = pos.start_column; 
+            end_column = pos.end_column }, msg))
 %} 
 
 /* Token declarations */
@@ -115,11 +131,13 @@ top_declaration:
   i_name = ID 
   "{" i_m_decls = i_member_declaration+ "}"
   { 
-		I(
-			InterfaceDecl { 
-				iname = i_name; 
-				declarations = i_m_decls
-			} <@> to_code_position($startpos, $endpos)) 
+    if is_upper i_name.[1] then
+		  I(
+        InterfaceDecl { 
+          iname = i_name; 
+          declarations = i_m_decls
+        } <@> to_code_position($startpos, $endpos)) 
+    else notation_error $startpos $endpos "prova"
 	}
 | "component" 
   c_name = ID 
@@ -221,13 +239,27 @@ block_content:
 type_:
 | bt = basic_type
   { bt }
-| t = type_ "[" "]"
-  { TArray(t, None) }
-| t = type_ s = delimited("[", T_INT, "]")
-  { TArray(t, Some (Int32.to_int s)) }
+/* t = type_ "[" "]", following strictly the grammar provided
+this would allow the possibility do declare multidimensional arrays. */
+| t = no_multidim "[" "]"
+  { 
+    TArray(t, None) 
+  }
+// t = type_ s = delimited("[", T_INT, "]")
+| t = no_multidim s = delimited("[", T_INT, "]")
+  { 
+    TArray(t, Some (Int32.to_int s)) 
+  }
 | "&" t = basic_type
   { TRef(t) }
 ;
+
+no_multidim:
+| bt = basic_type
+  { bt }
+| "&" t = basic_type
+  { TRef(t) }
+; 
 
 basic_type:
 | "int"
@@ -248,7 +280,7 @@ stmt:
     (Option.value (Option.map (fun x -> Expr(x)) e) ~default:(Skip))
       <@> 
     to_code_position($startpos, $endpos)
-}
+  }
 | b = block
   { b }
 | "while" cond = delimited("(", expr, ")") b = stmt 
