@@ -9,9 +9,9 @@
   exception Comment_error of lexeme_pos * string    
 
   let create_hashtable size init =
-      let tbl = Hashtbl.create size in
-      List.iter (fun (key, data) -> Hashtbl.add tbl key data) init;
-      tbl
+    let tbl = Hashtbl.create size in
+    List.iter (fun (key, data) -> Hashtbl.add tbl key data) init;
+    tbl
 
   let keyword_table =
     create_hashtable 18 [
@@ -77,7 +77,7 @@ rule next_token = parse
         let sc = init_pos.pos_cnum - init_pos.pos_bol in
         let ec = end_pos.pos_cnum - end_pos.pos_bol in
           raise (Lexing_error (generate_pos init_pos.pos_lnum sc ec,
-            "Too long identifier at: " ^ (Lexing.lexeme lexbuf))) 
+            "Identifier " ^ word ^ " exceeding 64 characters length")) 
       else
         printf "Recognized identifier: %s\n" word; 
         ID(word)
