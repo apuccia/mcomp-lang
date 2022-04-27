@@ -1,7 +1,7 @@
 ## Scanner and parser assignment TODOs 
 
 - [x] Identifiers have to start with a letter or an underscore and then can contain letters, underscore and numbers.
-- [ ] Identifiers have a max length of 64 characters.
+- [x] Identifiers have a max length of 64 characters.
 - [x] Names have to follow the *camel case* notation:
   - [x] *lower camel case* have to be used for variables and functions.
   - [x] *upper camel case* have to be used for components and interfaces
