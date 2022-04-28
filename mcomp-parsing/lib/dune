@@ -1,8 +1,9 @@
 (library
  (name mcomp_lang)
+ (libraries easy_logging)
  (public_name mcomp-lang)
  (preprocess (pps ppx_deriving.show ppx_deriving.ord ppx_deriving.eq)))
-
+  
 (ocamllex
   (modules scanner))
 

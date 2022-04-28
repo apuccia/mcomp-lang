@@ -12,6 +12,7 @@ depends: [
   "odoc" {with-doc}
   "ppx_deriving"
   "menhir"
+  "easy_logging"
 ]
 build: [
   ["dune" "subst"] {pinned}
