@@ -3,8 +3,8 @@
 - [x] Identifiers have to start with a letter or an underscore and then can contain letters, underscore and numbers.
 - [x] Identifiers have a max length of 64 characters.
 - [x] Names have to follow the *camel case* notation:
-  - [ ] *lower camel case* have to be used for variables and functions.
-  - [ ] *upper camel case* have to be used for components and interfaces
+  - [x] *lower camel case* have to be used for variables and functions.
+  - [x] *upper camel case* have to be used for components and interfaces
 - [x] Integer literals implemented as sequence of digits (32 bits):
   - [x] in base 10 *or*.
   - [x] in base 16 prefixed with `0x`.

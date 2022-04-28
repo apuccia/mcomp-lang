@@ -5,7 +5,7 @@
   open Ast
   open Location
 
-  exception Camelcase_error of lexeme_pos * string
+  exception Camelcase_error of string
 
   type 'a program_element = 
   | I of 'a interface_decl
@@ -23,10 +23,16 @@
     let pos = to_code_position(spos, epos) in 
       raise (
         Camelcase_error (
-          { 
-            line = pos.start_line; 
-            start_column = pos.start_column; 
-            end_column = pos.end_column }, msg))
+          "\n*** Error at line " ^ (Int.to_string pos.start_line) ^
+          " (" ^ (Int.to_string pos.start_column) ^ ":" ^ 
+          (Int.to_string pos.end_column) ^ ").\n*** " ^ msg))
+
+  let () =
+    Printexc.register_printer
+      (function
+        | Camelcase_error msg -> Some (Printf.sprintf "%s" msg)
+        | _ -> None (* for other exceptions *)
+      )
 %} 
 
 /* Token declarations */
@@ -131,13 +137,14 @@ top_declaration:
   i_name = ID 
   "{" i_m_decls = i_member_declaration+ "}"
   { 
-    if is_upper i_name.[1] then
+    if is_upper i_name.[0] then
 		  I(
         InterfaceDecl { 
           iname = i_name; 
           declarations = i_m_decls
         } <@> to_code_position($startpos, $endpos)) 
-    else notation_error $startpos $endpos "prova"
+    else notation_error $startpos $endpos
+      "Interfaces must start with a capital letter"
 	}
 | "component" 
   c_name = ID 
@@ -145,14 +152,17 @@ top_declaration:
   u = use_clause?
   "{" defs = c_member_declaration+ "}"
   { 
-		Comp(
-			ComponentDecl {
-        cname = c_name; 
-        provides = Option.value p ~default:[]; 
-        uses = Option.value u ~default:[]; 
-        definitions = defs } 
-      <@>
-      to_code_position($startpos, $endpos)) 
+    if is_upper c_name.[0] then
+      Comp(
+        ComponentDecl {
+          cname = c_name; 
+          provides = Option.value p ~default:[]; 
+          uses = Option.value u ~default:[]; 
+          definitions = defs } 
+        <@>
+        to_code_position($startpos, $endpos)) 
+    else notation_error $startpos $endpos 
+      "Components must start with a capital letter"
 	}
 | "connect" l = link ";"
   { Conns([l]) } 
@@ -163,7 +173,21 @@ top_declaration:
 
 link:
 | c1 = ID "." c1_use = ID "<-" c2 = ID "." c2_provide = ID
-  { Link(c1, c1_use, c2, c2_provide) }
+  { 
+    if is_upper c1.[1] then 
+      if is_upper c2.[1] then 
+        if is_upper c1_use.[1] then 
+          if is_upper c2_provide.[1] then 
+            Link(c1, c1_use, c2, c2_provide) 
+          else notation_error $startpos(c2_provide) $endpos(c2_provide)
+            "Interfaces must start with a capital letter"
+        else notation_error $startpos(c1_use) $endpos(c1_use)
+          "Interfaces must start with a capital letter"
+      else notation_error $startpos(c2) $endpos(c2)
+        "Components must start with a capital letter"
+    else notation_error $startpos(c1) $endpos(c1)
+      "Components must start with a capital letter"
+  }
 ;
 
 i_member_declaration:
@@ -186,7 +210,12 @@ use_clause:
 
 var_sign:
 | id = ID ":" t = type_
-  { id, t }
+  { 
+    if Bool.not (is_upper id.[0]) then
+      id, t 
+    else notation_error $startpos(id) $endpos(id)
+      "Variable names must start with lowercase letter"
+  }
 ;
 
 fun_prototype:
@@ -195,12 +224,15 @@ fun_prototype:
   "(" p = separated_list(",", var_sign) ")"
   rt = preceded(":", basic_type)?
   { 
-		{
-      rtype = Option.value rt ~default:TVoid;
-      fname = id;
-      formals = p;
-      body = None
-  	} 
+    if Bool.not (is_upper id.[0]) then
+      {
+        rtype = Option.value rt ~default:TVoid;
+        fname = id;
+        formals = p;
+        body = None
+      } 
+    else notation_error $startpos(id) $endpos(id)
+      "Function names must start with lowercase letter"
 	}
 ;
 
@@ -342,7 +374,12 @@ expr:
 | "!" e = expr
   { UnaryOp(Not, e) <@> to_code_position($startpos, $endpos) }
 | fname = ID "(" args = separated_list(",", expr) ")"
-  { Call(None, fname, args) <@> to_code_position($startpos, $endpos) }
+  { 
+    if Bool.not (is_upper fname.[0]) then
+      Call(None, fname, args) <@> to_code_position($startpos, $endpos) 
+    else notation_error $startpos(fname) $endpos(fname)
+      "Function names must start with lowercase letter"
+  }
 | l = l_value
   { LV(l) <@> to_code_position($startpos, $endpos) }
 | "-" e = expr
@@ -353,12 +390,20 @@ expr:
 
 l_value:
 | id = ID 
-  { AccVar(None, id) <@> to_code_position($startpos, $endpos) }
+  { 
+    if Bool.not (is_upper id.[0]) then
+      AccVar(None, id) <@> to_code_position($startpos, $endpos) 
+    else notation_error $startpos $endpos
+      "Variable names must start with lowercase letter"
+  }
 | id = ID "[" e = expr "]"
   { 
-		AccIndex(AccVar(None, id) <@> to_code_position($startpos, $endpos), e) 
-    	<@> 
-    to_code_position($startpos, $endpos) 
+    if Bool.not (is_upper id.[0]) then
+      AccIndex(AccVar(None, id) <@> to_code_position($startpos, $endpos), e) 
+        <@> 
+      to_code_position($startpos, $endpos)
+    else notation_error $startpos(id) $endpos(id)
+      "Variable names must start with lowercase letter"
 	}
 
 %inline bin_op:
