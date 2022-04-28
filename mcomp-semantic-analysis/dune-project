@@ -22,5 +22,6 @@
   dune
   (odoc :with-doc)
   ppx_deriving
-  menhir))
+  menhir
+  easy_logging))
 

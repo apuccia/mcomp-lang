@@ -3,7 +3,7 @@
   open Parser
   open Lexing
   open Location
-  open Printf
+  open Easy_logging
 
   exception Lexing_error of lexeme_pos * string    
 
@@ -33,9 +33,34 @@
       ("true", T_BOOL(true));
       ("false", T_BOOL(false));
     ]
+  
+  let kw_to_string t =
+    match t with 
+    | VAR -> "VAR"
+    | IF -> "IF"
+    | RETURN -> "RETURN"
+    | ELSE -> "ELSE"
+    | WHILE -> "WHILE"
+    | INT -> "INT"
+    | CHAR -> "CHAR"
+    | VOID -> "VOID"
+    | BOOL -> "BOOL"
+    | INTERFACE -> "INTERFACE"
+    | USES -> "USES"
+    | PROVIDES -> "PROVIDES"
+    | COMPONENT -> "COMPONENT"
+    | CONNECT -> "CONNECT"
+    | DEF -> "DEF"
+    | FOR -> "FOR"
+    | T_BOOL(true) -> "T_BOOL(true)"
+    | T_BOOL(false) -> "T_BOOL(false)"
+    | _ -> ""
 
   let generate_pos l sc ec = 
     { line = l; start_column = sc; end_column = ec }
+
+  let info_logger = 
+    Logging.make_logger "Scanner" Logging.Info [Handlers.Cli Logging.Info]
 }
 
 (* Declaration of regular expressions *)
@@ -57,9 +82,10 @@ let id = (upper | lower)['a' - 'z' 'A' - 'Z' '0' - '9' '_']*
 rule next_token = parse
 | exa digit+ as inum    
   {
-    printf "Recognized integer literal\n";
     let integer = Int32.of_string inum
-    in T_INT(integer)
+    in
+      info_logger#info "Recognized integer literal T_INT(%ld)" integer;
+      T_INT(integer)
   }
 | '\''          
   { character lexbuf }
@@ -67,7 +93,7 @@ rule next_token = parse
   {
     try
       let kw = Hashtbl.find keyword_table word in
-        printf "Recognized keyword: %s\n" word;
+        info_logger#info "Recognized keyword %s = %s" word (kw_to_string kw);
         kw
     with Not_found -> 
       if String.length word > 64 then
@@ -75,80 +101,81 @@ rule next_token = parse
         let end_pos = Lexing.lexeme_end_p lexbuf in
         let sc = init_pos.pos_cnum - init_pos.pos_bol in
         let ec = end_pos.pos_cnum - end_pos.pos_bol in
+          info_logger#error "Identifier %s too long" word;
           raise (Lexing_error (generate_pos init_pos.pos_lnum sc ec,
             "Identifier " ^ word ^ " exceeding 64 characters length")) 
       else
-        printf "Recognized identifier: %s\n" word; 
+        info_logger#info "Recognized identifier ID(%s)" word;
         ID(word)
   }
 | '&'           
-  { printf "Recognized &\n"; REF }
+  { info_logger#info "Recognized '&' = REF"; REF }
 | '+'           
-  { printf "Recognized +\n"; PLUS }
+  { info_logger#info "Recognized '+' = PLUS"; PLUS }
 | '-'           
-  { printf "Recognized -\n"; MINUS }
+  { info_logger#info "Recognized '-' = MINUS"; MINUS }
 | '*'           
-  { printf "Recognized *\n"; TIMES }
+  { info_logger#info "Recognized '*' = TIMES"; TIMES }
 | '/'           
-  { printf "Recognized /\n"; DIV }
+  { info_logger#info "Recognized '/' = DIV"; DIV }
 | '%'           
-  { printf "Recognized mod\n"; MOD }
+  { info_logger#info "Recognized '%%' = MOD"; MOD }
 | '='           
-  { printf "Recognized =\n"; ASSIGN }
+  { info_logger#info "Recognized '=' = ASSIGN"; ASSIGN }
 | "=="          
-  { printf "Recognized ==\n"; EQUAL }
+  { info_logger#info "Recognized '==' = EQUAL"; EQUAL }
 | "!="          
-  { printf "Recognized !=\n"; NEQ }
+  { info_logger#info "Recognized '!=' = NEQ"; NEQ }
 | '<'           
-  { printf "Recognized <\n"; LESS }
+  { info_logger#info "Recognized '<' = LESS"; LESS }
 | "<="          
-  { printf "Recognized <=\n"; LEQ }
+  { info_logger#info "Recognized '<=' = LEQ"; LEQ }
 | '>'           
-  { printf "Recognized >\n"; GREATER }
+  { info_logger#info "Recognized '>' = GREATER"; GREATER }
 | ">="          
-  { printf "Recognized >=\n"; GEQ }
+  { info_logger#info "Recognized '<' = GEQ"; GEQ }
 | "&&"          
-  { printf "Recognized &&\n"; AND }
+  { info_logger#info "Recognized '&&' = AND"; AND }
 | "||"          
-  { printf "Recognized ||\n"; OR }
+  { info_logger#info "Recognized '||' = OR"; OR }
 | '!'           
-  { printf "Recognized !\n"; NEG }
+  { info_logger#info "Recognized '!' = NEG"; NEG }
 | '('           
-  { printf "Recognized (\n"; LRBRACK }
+  { info_logger#info "Recognized '(' = LRBRACK"; LRBRACK }
 | ')'           
-  { printf "Recognized )\n"; RRBRACK }
+  { info_logger#info "Recognized ')' = RRBRACK"; RRBRACK }
 | '{'           
-  { printf "Recognized {\n"; LCBRACK }
+  { info_logger#info "Recognized '{' = LCBRACK"; LCBRACK }
 | '}'           
-  { printf "Recognized }\n"; RCBRACK }
+  { info_logger#info "Recognized '}' = RCBRACK"; RCBRACK }
 | '['           
-  { printf "Recognized [\n"; LSBRACK }
+  { info_logger#info "Recognized '[' = LSBRACK"; LSBRACK }
 | ']'           
-  { printf "Recognized ]\n"; RSBRACK }
+  { info_logger#info "Recognized ']' = RSBRACK"; RSBRACK }
 | '.'           
-  { printf "Recognized .\n"; DOT }
+  { info_logger#info "Recognized '.' = DOT"; DOT }
 | ','           
-  { printf "Recognized ,\n"; COMMA }
+  { info_logger#info "Recognized ',' = COMMA"; COMMA }
 | ';'           
-  { printf "Recognized ;\n"; SEMICOLON }
+  { info_logger#info "Recognized ';' = SEMICOLON"; SEMICOLON }
 | "<-"          
-  { printf "Recognized <-\n"; CONN }
+  { info_logger#info "Recognized '<-' = CONN"; CONN }
 | ':'           
-  { printf "Recognized :\n"; TYPESIG }
+  { info_logger#info "Recognized ':' = TYPESIG"; TYPESIG }
 | "//"          
   { 
-    printf "Started recognizing inline comment\n"; 
+    info_logger#info "Started recognizing inline comment"; 
     inline_comment lexbuf 
   }
 | "/*"          
   { 
-    printf "Started recognizing block comment\n"; 
+    info_logger#info "Started recognizing block comment";
     block_comment lexbuf 
   }
 | [' ' '\t']    
   { next_token lexbuf }
 | '\n'          
-  { printf "Recognized \\n\n"; Lexing.new_line lexbuf; next_token lexbuf }
+  { info_logger#info "Recognized \\n"; Lexing.new_line lexbuf; next_token lexbuf }
 | eof           
   { EOF }
 | _             
@@ -157,32 +184,34 @@ rule next_token = parse
     let end_pos = Lexing.lexeme_end_p lexbuf in
     let sc = init_pos.pos_cnum - init_pos.pos_bol in
     let ec = end_pos.pos_cnum - end_pos.pos_bol in
+      info_logger#error "Unexpected characters %s" (Lexing.lexeme lexbuf);
       raise (Lexing_error (generate_pos init_pos.pos_lnum sc ec, 
         "Unexpected character: " ^ (Lexing.lexeme lexbuf))) 
   }
 and inline_comment = parse
 | '\n'          
-  { printf "Finished recognizing inline comment\n"; next_token lexbuf }
+  { info_logger#info "Finished recognizing inline comment"; next_token lexbuf }
 | _             
   { inline_comment lexbuf }
 and block_comment = parse (* ignore other nested comments *)
 | "*/"          
-  { printf "Finished recognizing block comment\n"; next_token lexbuf }
+  { info_logger#info "Finished recognizing block comment"; next_token lexbuf }
 | eof           
   { 
     let init_pos = Lexing.lexeme_start_p lexbuf in
     let end_pos = Lexing.lexeme_end_p lexbuf in
     let sc = init_pos.pos_cnum - init_pos.pos_bol in
     let ec = end_pos.pos_cnum - end_pos.pos_bol in
+      info_logger#error "Not terminating comment block";
       raise (Lexing_error (generate_pos init_pos.pos_lnum sc ec, 
         "Comment block not terminated"))
   }
 | _             
   { block_comment lexbuf }
 and character = parse 
-| (characters|special) as c
+| (characters | special) as c
   { 
-    printf "Recognized character\n"; 
+    info_logger#info "Recognized character literal T_CHAR(%c)" c;
     T_CHAR(c)
   }
 | '\''          
