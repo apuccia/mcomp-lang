@@ -6,7 +6,6 @@
   open Printf
 
   exception Lexing_error of lexeme_pos * string    
-  exception Comment_error of lexeme_pos * string    
 
   let create_hashtable size init =
     let tbl = Hashtbl.create size in
@@ -175,11 +174,11 @@ and block_comment = parse (* ignore other nested comments *)
     let end_pos = Lexing.lexeme_end_p lexbuf in
     let sc = init_pos.pos_cnum - init_pos.pos_bol in
     let ec = end_pos.pos_cnum - end_pos.pos_bol in
-      raise (Comment_error (generate_pos init_pos.pos_lnum sc ec, 
-        "Comment block not terminated at: " ^ (Lexing.lexeme lexbuf)))
+      raise (Lexing_error (generate_pos init_pos.pos_lnum sc ec, 
+        "Comment block not terminated"))
   }
 | _             
-  { inline_comment lexbuf }
+  { block_comment lexbuf }
 and character = parse 
 | (characters|special) as c
   { 
