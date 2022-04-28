@@ -143,7 +143,7 @@ top_declaration:
           iname = i_name; 
           declarations = i_m_decls
         } <@> to_code_position($startpos, $endpos)) 
-    else notation_error $startpos $endpos
+    else notation_error $startpos(i_name) $endpos(i_name)
       "Interfaces must start with a capital letter"
 	}
 | "component" 
@@ -161,7 +161,7 @@ top_declaration:
           definitions = defs } 
         <@>
         to_code_position($startpos, $endpos)) 
-    else notation_error $startpos $endpos 
+    else notation_error $startpos(c_name) $endpos(c_name) 
       "Components must start with a capital letter"
 	}
 | "connect" l = link ";"
