@@ -59,8 +59,10 @@
   let generate_pos l sc ec = 
     { line = l; start_column = sc; end_column = ec }
 
-  let info_logger = 
-    Logging.make_logger "Scanner" Logging.Info [Handlers.Cli Logging.Info]
+  let logger = 
+    let file_h = Handlers.File("Scanner", Logging.Debug) in 
+      let cli_h = Handlers.Cli Logging.Debug in
+        Logging.make_logger "Scanner" Logging.Debug [cli_h; file_h]
 }
 
 (* Declaration of regular expressions *)
@@ -84,7 +86,7 @@ rule next_token = parse
   {
     let integer = Int32.of_string inum
     in
-      info_logger#info "Recognized integer literal T_INT(%ld)" integer;
+      logger#info "Recognized integer literal T_INT(%ld)" integer;
       T_INT(integer)
   }
 | '\''          
@@ -93,7 +95,7 @@ rule next_token = parse
   {
     try
       let kw = Hashtbl.find keyword_table word in
-        info_logger#info "Recognized keyword %s = %s" word (kw_to_string kw);
+        logger#info "Recognized keyword %s = %s" word (kw_to_string kw);
         kw
     with Not_found -> 
       if String.length word > 64 then
@@ -101,81 +103,81 @@ rule next_token = parse
         let end_pos = Lexing.lexeme_end_p lexbuf in
         let sc = init_pos.pos_cnum - init_pos.pos_bol in
         let ec = end_pos.pos_cnum - end_pos.pos_bol in
-          info_logger#error "Identifier %s too long" word;
+          logger#error "Identifier %s too long" word;
           raise (Lexing_error (generate_pos init_pos.pos_lnum sc ec,
             "Identifier " ^ word ^ " exceeding 64 characters length")) 
       else
-        info_logger#info "Recognized identifier ID(%s)" word;
+        logger#info "Recognized identifier ID(%s)" word;
         ID(word)
   }
 | '&'           
-  { info_logger#info "Recognized '&' = REF"; REF }
+  { logger#info "Recognized '&' = REF"; REF }
 | '+'           
-  { info_logger#info "Recognized '+' = PLUS"; PLUS }
+  { logger#info "Recognized '+' = PLUS"; PLUS }
 | '-'           
-  { info_logger#info "Recognized '-' = MINUS"; MINUS }
+  { logger#info "Recognized '-' = MINUS"; MINUS }
 | '*'           
-  { info_logger#info "Recognized '*' = TIMES"; TIMES }
+  { logger#info "Recognized '*' = TIMES"; TIMES }
 | '/'           
-  { info_logger#info "Recognized '/' = DIV"; DIV }
+  { logger#info "Recognized '/' = DIV"; DIV }
 | '%'           
-  { info_logger#info "Recognized '%%' = MOD"; MOD }
+  { logger#info "Recognized '%%' = MOD"; MOD }
 | '='           
-  { info_logger#info "Recognized '=' = ASSIGN"; ASSIGN }
+  { logger#info "Recognized '=' = ASSIGN"; ASSIGN }
 | "=="          
-  { info_logger#info "Recognized '==' = EQUAL"; EQUAL }
+  { logger#info "Recognized '==' = EQUAL"; EQUAL }
 | "!="          
-  { info_logger#info "Recognized '!=' = NEQ"; NEQ }
+  { logger#info "Recognized '!=' = NEQ"; NEQ }
 | '<'           
-  { info_logger#info "Recognized '<' = LESS"; LESS }
+  { logger#info "Recognized '<' = LESS"; LESS }
 | "<="          
-  { info_logger#info "Recognized '<=' = LEQ"; LEQ }
+  { logger#info "Recognized '<=' = LEQ"; LEQ }
 | '>'           
-  { info_logger#info "Recognized '>' = GREATER"; GREATER }
+  { logger#info "Recognized '>' = GREATER"; GREATER }
 | ">="          
-  { info_logger#info "Recognized '<' = GEQ"; GEQ }
+  { logger#info "Recognized '<' = GEQ"; GEQ }
 | "&&"          
-  { info_logger#info "Recognized '&&' = AND"; AND }
+  { logger#info "Recognized '&&' = AND"; AND }
 | "||"          
-  { info_logger#info "Recognized '||' = OR"; OR }
+  { logger#info "Recognized '||' = OR"; OR }
 | '!'           
-  { info_logger#info "Recognized '!' = NEG"; NEG }
+  { logger#info "Recognized '!' = NEG"; NEG }
 | '('           
-  { info_logger#info "Recognized '(' = LRBRACK"; LRBRACK }
+  { logger#info "Recognized '(' = LRBRACK"; LRBRACK }
 | ')'           
-  { info_logger#info "Recognized ')' = RRBRACK"; RRBRACK }
+  { logger#info "Recognized ')' = RRBRACK"; RRBRACK }
 | '{'           
-  { info_logger#info "Recognized '{' = LCBRACK"; LCBRACK }
+  { logger#info "Recognized '{' = LCBRACK"; LCBRACK }
 | '}'           
-  { info_logger#info "Recognized '}' = RCBRACK"; RCBRACK }
+  { logger#info "Recognized '}' = RCBRACK"; RCBRACK }
 | '['           
-  { info_logger#info "Recognized '[' = LSBRACK"; LSBRACK }
+  { logger#info "Recognized '[' = LSBRACK"; LSBRACK }
 | ']'           
-  { info_logger#info "Recognized ']' = RSBRACK"; RSBRACK }
+  { logger#info "Recognized ']' = RSBRACK"; RSBRACK }
 | '.'           
-  { info_logger#info "Recognized '.' = DOT"; DOT }
+  { logger#info "Recognized '.' = DOT"; DOT }
 | ','           
-  { info_logger#info "Recognized ',' = COMMA"; COMMA }
+  { logger#info "Recognized ',' = COMMA"; COMMA }
 | ';'           
-  { info_logger#info "Recognized ';' = SEMICOLON"; SEMICOLON }
+  { logger#info "Recognized ';' = SEMICOLON"; SEMICOLON }
 | "<-"          
-  { info_logger#info "Recognized '<-' = CONN"; CONN }
+  { logger#info "Recognized '<-' = CONN"; CONN }
 | ':'           
-  { info_logger#info "Recognized ':' = TYPESIG"; TYPESIG }
+  { logger#info "Recognized ':' = TYPESIG"; TYPESIG }
 | "//"          
   { 
-    info_logger#info "Started recognizing inline comment"; 
+    logger#info "Started recognizing inline comment"; 
     inline_comment lexbuf 
   }
 | "/*"          
   { 
-    info_logger#info "Started recognizing block comment";
+    logger#info "Started recognizing block comment";
     block_comment lexbuf 
   }
 | [' ' '\t']    
   { next_token lexbuf }
 | '\n'          
-  { info_logger#info "Recognized \\n"; Lexing.new_line lexbuf; next_token lexbuf }
+  { logger#info "Recognized \\n"; Lexing.new_line lexbuf; next_token lexbuf }
 | eof           
   { EOF }
 | _             
@@ -184,25 +186,25 @@ rule next_token = parse
     let end_pos = Lexing.lexeme_end_p lexbuf in
     let sc = init_pos.pos_cnum - init_pos.pos_bol in
     let ec = end_pos.pos_cnum - end_pos.pos_bol in
-      info_logger#error "Unexpected characters %s" (Lexing.lexeme lexbuf);
+      logger#error "Unexpected character %s" (Lexing.lexeme lexbuf);
       raise (Lexing_error (generate_pos init_pos.pos_lnum sc ec, 
         "Unexpected character: " ^ (Lexing.lexeme lexbuf))) 
   }
 and inline_comment = parse
 | '\n'          
-  { info_logger#info "Finished recognizing inline comment"; next_token lexbuf }
+  { logger#info "Finished recognizing inline comment"; next_token lexbuf }
 | _             
   { inline_comment lexbuf }
 and block_comment = parse (* ignore other nested comments *)
 | "*/"          
-  { info_logger#info "Finished recognizing block comment"; next_token lexbuf }
+  { logger#info "Finished recognizing block comment"; next_token lexbuf }
 | eof           
   { 
     let init_pos = Lexing.lexeme_start_p lexbuf in
     let end_pos = Lexing.lexeme_end_p lexbuf in
     let sc = init_pos.pos_cnum - init_pos.pos_bol in
     let ec = end_pos.pos_cnum - end_pos.pos_bol in
-      info_logger#error "Not terminating comment block";
+      logger#error "Not terminating comment block";
       raise (Lexing_error (generate_pos init_pos.pos_lnum sc ec, 
         "Comment block not terminated"))
   }
@@ -211,7 +213,7 @@ and block_comment = parse (* ignore other nested comments *)
 and character = parse 
 | (characters | special) as c
   { 
-    info_logger#info "Recognized character literal T_CHAR(%c)" c;
+    logger#info "Recognized character literal T_CHAR(%c)" c;
     T_CHAR(c)
   }
 | '\''          
