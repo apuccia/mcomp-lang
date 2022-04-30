@@ -21,5 +21,5 @@ component Program provides App uses Printer,Foo {
 }
 
 // The component CPrinter does not provide the interface Foo
-connect Program.Printer <- CPrinter.Printer
-connect Program.Foo <- CPrinter.Foo
+connect Program.Printer <- CPrinter.Printer;
+connect Program.Foo <- CPrinter.Foo;

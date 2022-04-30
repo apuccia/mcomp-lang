@@ -29,5 +29,5 @@ component Program provides App uses Printer,Bar {
 }
 
 // The interface Bar is not compatible with the interface Foo
-connect Program.Printer <- CPrinter.Printer
-connect Program.Bar <- CPrinter.Foo
+connect Program.Printer <- CPrinter.Printer;
+connect Program.Bar <- CPrinter.Foo;
