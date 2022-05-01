@@ -1,5 +1,5 @@
 exception DuplicateEntry of Ast.identifier
-exception NotFoundEntry of Ast.identifier
+exception NotFoundEntry
 
 type 'a t = Dummy | Table of 'a t * (Ast.identifier, 'a) Hashtbl.t  (* A Dummy type *)
 
@@ -21,7 +21,7 @@ let rec lookup ide table =
         Hashtbl.find hash_tbl ide
       with
         | Not_found -> lookup ide parent)
-    | Dummy -> raise (NotFoundEntry ide)
+    | Dummy -> raise (NotFoundEntry)
 
 let add_entry ide value table = 
   match table with
@@ -29,7 +29,7 @@ let add_entry ide value table =
       (try
         let _ = lookup ide table in raise (DuplicateEntry ide)
       with 
-        Not_found -> let _ = Hashtbl.add hash_tbl ide value in Table(parent_block, hash_tbl))
+        NotFoundEntry -> let _ = Hashtbl.add hash_tbl ide value in Table(parent_block, hash_tbl))
     | Dummy -> failwith "No scope"
 
 let rec scan_list l table = 

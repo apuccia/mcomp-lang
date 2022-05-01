@@ -1,4 +1,6 @@
 exception DuplicateEntry of Ast.identifier
+exception NotFoundEntry
+
 type 'a t 
 (* val empty_table : 'a t *) 
 val empty_table : unit -> 'a t
