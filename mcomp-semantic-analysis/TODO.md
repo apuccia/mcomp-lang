@@ -27,8 +27,8 @@
 - [x] Array should have a size of at least 1 element.
 - [x] Array cannot be assigned, i.e., `array1 = array2` is not allowed.
 - [ ] Array references can occur only as formal parameters.
-- [ ] Variables of type `void` are not allowed.
-- [ ] References `T&` requires that `T` is a scalar type.
+- [x] Variables of type `void` are not allowed.
+- [x] References `T&` requires that `T` is a scalar type.
 - [ ] Currently, functions can only return `int`, `bool`, `char` and `void`.
 - [ ] Multi-dimensional arrays are not supported.
 - [ ] References `T&` supports automatic dereference: when a reference does not occur in the left hand-side of an assignment, it is automatically dereferenced and its type is `T`.

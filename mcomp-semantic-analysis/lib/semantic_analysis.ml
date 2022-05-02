@@ -46,9 +46,12 @@ let check_vardecl v pos =
       (* arrays should have a size of at least 1 element *)
       if Option.get s >= 1 then VarDecl (i, TArray (t, s)) <@> TArray (t, s)
       else raise_semantic_error pos "Array should have a size of at least 1"
-  | i, TRef t -> VarDecl (i, TRef t) <@> TRef t
+  | i, TRef ((TInt | TBool | TChar) as t) -> VarDecl (i, TRef t) <@> TRef t
+  | _, TRef _ ->
+      raise_semantic_error pos "Can't declare a reference to an array"
   | _, _ ->
-      raise_semantic_error pos "Not an allowed type for variable declaration"
+      raise_semantic_error pos
+        "Void is not an allowed type for variable declaration"
 
 let check_member_decl m scope =
   match m.node with
