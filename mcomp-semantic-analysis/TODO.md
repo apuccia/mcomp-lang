@@ -29,8 +29,8 @@
 - [ ] Array references can occur only as formal parameters.
 - [x] Variables of type `void` are not allowed.
 - [x] References `T&` requires that `T` is a scalar type.
-- [ ] Currently, functions can only return `int`, `bool`, `char` and `void`.
-- [ ] Multi-dimensional arrays are not supported.
+- [x] Currently, functions can only return `int`, `bool`, `char` and `void`.
+- [x] Multi-dimensional arrays are not supported.
 - [ ] References `T&` supports automatic dereference: when a reference does not occur in the left hand-side of an assignment, it is automatically dereferenced and its type is `T`.
 - [ ] When a reference `x` of type `T&` is on the left hand-side of an assignment, the semantics of the assignment depends on the type of the expression `e` on right hand-side: 
   - [ ] If `e` has type `T&`, the assignment is well typed and its execution changes the address `x` points to with the address resulting from the evaluation of `e`.

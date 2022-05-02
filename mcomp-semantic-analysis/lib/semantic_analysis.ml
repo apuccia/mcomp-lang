@@ -57,6 +57,10 @@ let check_member_decl m scope =
   match m.node with
   | FunDecl f ->
       add_entry f.fname f.rtype scope |> ignore;
+      (match f.rtype with 
+      | (TInt | TBool | TChar | TVoid) -> 
+        raise_semantic_error m.annot "Not a valid return type for function"
+      | _ -> ());
       (* f.body will be None because we are in an interface *)
       FunDecl
         { rtype = f.rtype; fname = f.fname; formals = f.formals; body = None }
