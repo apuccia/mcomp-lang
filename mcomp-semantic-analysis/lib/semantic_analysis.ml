@@ -131,11 +131,16 @@ let rec check_exp e cname scope =
   | Call (_, ide_f, args) -> (
       let args_list = List.map (fun x -> check_exp x cname scope) args in
       try
-        (* Searching fun in local scope *)
+        (* searching fun in local scope *)
         let tfun = lookup ide_f scope in
         match tfun with
+        (* only functions can be invoked *)
         | TFun (typ_args_list, rt) -> (
             try
+              (* 
+                function call must provides a number of arguments equals
+                to the parameters of the function
+              *)
               List.iter2
                 (fun x y ->
                   if x.annot != y then
@@ -147,14 +152,20 @@ let rec check_exp e cname scope =
               dbg_typ (show_expr pp_typ t_c) e.annot;
               t_c
             with Invalid_argument _ ->
+              (* 
+                function call must provides a number of arguments equals
+                to the parameters of the function
+              *)
               raise_semantic_error e.annot
                 "Missing arguments for the function call")
         | _ -> raise_semantic_error e.annot "Not a function"
       with NotFoundEntry -> (
+        (* searching fun in used interfaces scope *)
         let q = get_interface_qualifier cname ide_f e.annot in
         match q with
         | iname, t -> (
             match t with
+            (* only functions can be invoked *)
             | TFun (typ_args_list, rt) -> (
                 try
                   List.iter2
@@ -168,6 +179,10 @@ let rec check_exp e cname scope =
                   dbg_typ (show_expr pp_typ t_c) e.annot;
                   t_c
                 with Invalid_argument _ ->
+                  (* 
+                    function call must provides a number of arguments equals
+                    to the parameters of the function
+                  *)
                   raise_semantic_error e.annot
                     "Missing arguments for the function call")
             | _ -> raise_semantic_error e.annot "Not a function")))
@@ -367,6 +382,7 @@ let rec check_stmt body cname fscope rtype =
       let t_s1 = check_stmt s1 cname fscope rtype in
       let t_s2 = check_stmt s2 cname fscope rtype in
       match t_e.annot with
+      (* Conditional guard in if statement expect boolean values *)
       | TBool ->
           let t_if = If (t_e, t_s1, t_s2) <@> TVoid in
           dbg_typ (show_stmt pp_typ t_if) body.annot;
@@ -376,6 +392,7 @@ let rec check_stmt body cname fscope rtype =
       let t_e = check_exp e cname fscope in
       let t_s = check_stmt s cname fscope rtype in
       match t_e.annot with
+      (* Conditional guard in while/for statement expect boolean values *)
       | TBool ->
           let t_while = While (t_e, t_s) <@> TVoid in
           dbg_typ (show_stmt pp_typ t_while) body.annot;

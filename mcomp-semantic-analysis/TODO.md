@@ -21,9 +21,9 @@
 - [x] Arithmetic operators expect only integer values.
 - [x] Logical operators expect only boolean values.
 - [x] In `a[i]` we expect `a` to be an array or a reference to an array and `i` to be an integer value.
-- [ ] Only functions can be invoked.
-- [ ] A function call must provides a number of arguments equals to the parameters of the function.
-- [ ] Conditional guards in `if`, `while` and `for` statements expect boolean values.
+- [x] Only functions can be invoked.
+- [x] A function call must provides a number of arguments equals to the parameters of the function.
+- [x] Conditional guards in `if`, `while` and `for` statements expect boolean values.
 - [ ] Array should have a size of at least 1 element.
 - [ ] Array cannot be assigned, i.e., `array1 = array2` is not allowed.
 - [ ] Array references can occur only as formal parameters.
