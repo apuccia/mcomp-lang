@@ -42,7 +42,10 @@ let check_vardecl v pos =
   | i, TInt -> VarDecl (i, TInt) <@> TInt
   | i, TBool -> VarDecl (i, TBool) <@> TBool
   | i, TChar -> VarDecl (i, TChar) <@> TChar
-  | i, TArray (t, s) -> VarDecl (i, TArray (t, s)) <@> TArray (t, s)
+  | i, TArray (t, s) ->
+      (* arrays should have a size of at least 1 element *)
+      if Option.get s >= 1 then VarDecl (i, TArray (t, s)) <@> TArray (t, s)
+      else raise_semantic_error pos "Array should have a size of at least 1"
   | i, TRef t -> VarDecl (i, TRef t) <@> TRef t
   | _, _ ->
       raise_semantic_error pos "Not an allowed type for variable declaration"
@@ -84,6 +87,15 @@ let rec check_exp e cname scope =
   | Assign (lv, e) ->
       let t_e = check_exp e cname scope in
       let t_lv = check_lvalue lv cname scope in
+      (* array cannot be assigned *)
+      (match lv.node with
+      | AccVar (_, i) -> (
+          match lookup i scope with
+          | TArray _ ->
+              raise_semantic_error e.annot
+                "Can't assign an array to another array"
+          | _ -> ())
+      | _ -> ());
       if t_lv.annot != t_e.annot then
         raise_semantic_error e.annot "Not same type"
       else
@@ -137,9 +149,9 @@ let rec check_exp e cname scope =
         (* only functions can be invoked *)
         | TFun (typ_args_list, rt) -> (
             try
-              (* 
-                function call must provides a number of arguments equals
-                to the parameters of the function
+              (*
+                 function call must provides a number of arguments equals
+                 to the parameters of the function
               *)
               List.iter2
                 (fun x y ->
@@ -152,7 +164,7 @@ let rec check_exp e cname scope =
               dbg_typ (show_expr pp_typ t_c) e.annot;
               t_c
             with Invalid_argument _ ->
-              (* 
+              (*
                 function call must provides a number of arguments equals
                 to the parameters of the function
               *)
@@ -161,31 +173,34 @@ let rec check_exp e cname scope =
         | _ -> raise_semantic_error e.annot "Not a function"
       with NotFoundEntry -> (
         (* searching fun in used interfaces scope *)
-        let q = get_interface_qualifier cname ide_f e.annot in
-        match q with
-        | iname, t -> (
-            match t with
-            (* only functions can be invoked *)
-            | TFun (typ_args_list, rt) -> (
-                try
-                  List.iter2
-                    (fun x y ->
-                      if x.annot != y then
-                        raise_semantic_error e.annot
-                          "Arguments with different types wrt declaration of \
-                           function")
-                    args_list typ_args_list;
-                  let t_c = Call (Some iname, ide_f, args_list) <@> rt in
-                  dbg_typ (show_expr pp_typ t_c) e.annot;
-                  t_c
-                with Invalid_argument _ ->
-                  (* 
-                    function call must provides a number of arguments equals
-                    to the parameters of the function
-                  *)
-                  raise_semantic_error e.annot
-                    "Missing arguments for the function call")
-            | _ -> raise_semantic_error e.annot "Not a function")))
+        try
+          let q = get_interface_qualifier cname ide_f e.annot in
+          match q with
+          | iname, t -> (
+              match t with
+              (* only functions can be invoked *)
+              | TFun (typ_args_list, rt) -> (
+                  try
+                    List.iter2
+                      (fun x y ->
+                        if x.annot != y then
+                          raise_semantic_error e.annot
+                            "Arguments with different types wrt declaration of \
+                             function")
+                      args_list typ_args_list;
+                    let t_c = Call (Some iname, ide_f, args_list) <@> rt in
+                    dbg_typ (show_expr pp_typ t_c) e.annot;
+                    t_c
+                  with Invalid_argument _ ->
+                    (*
+                      function call must provides a number of arguments equals
+                      to the parameters of the function
+                    *)
+                    raise_semantic_error e.annot
+                      "Missing arguments for the function call")
+              | _ -> raise_semantic_error e.annot "Not a function")
+        with Not_found ->
+          raise_semantic_error e.annot "Could not find function definition"))
 
 and check_lvalue lv cname scope =
   match lv.node with
@@ -495,9 +510,10 @@ let rec check_component_def c interfaces scope =
           "Multiple occurrences of the same interface in provides clause";
 
       let names =
-        List.map
-          (fun x -> match x.node with InterfaceDecl y -> y.iname)
-          interfaces
+        "Prelude" :: "App"
+        :: List.map
+             (fun x -> match x.node with InterfaceDecl y -> y.iname)
+             interfaces
       in
       (* check that in use clause we have only interfaces *)
       List.iter

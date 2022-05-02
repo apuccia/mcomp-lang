@@ -24,8 +24,8 @@
 - [x] Only functions can be invoked.
 - [x] A function call must provides a number of arguments equals to the parameters of the function.
 - [x] Conditional guards in `if`, `while` and `for` statements expect boolean values.
-- [ ] Array should have a size of at least 1 element.
-- [ ] Array cannot be assigned, i.e., `array1 = array2` is not allowed.
+- [x] Array should have a size of at least 1 element.
+- [x] Array cannot be assigned, i.e., `array1 = array2` is not allowed.
 - [ ] Array references can occur only as formal parameters.
 - [ ] Variables of type `void` are not allowed.
 - [ ] References `T&` requires that `T` is a scalar type.
