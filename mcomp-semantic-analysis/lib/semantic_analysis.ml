@@ -189,14 +189,21 @@ and check_lvalue lv cname scope =
             t_av))
   | AccIndex (lv', e) -> (
       let t_e = check_exp e cname scope in
+      (* in a[i] we expect i to be an integer value *)
+      if t_e.annot != TInt then
+        raise_semantic_error e.annot
+          "The expression within [ ] is not an integer";
       let t_lv = check_lvalue lv' cname scope in
-      match t_lv.node with
-      | AccVar (_, _) ->
+      match (t_lv.node, t_lv.annot) with
+      (* in a[i] we expect a to be to be an array or a reference to an array *)
+      | AccVar _, (TArray _ | TRef (TArray _)) ->
           let t_ai = AccIndex (t_lv, t_e) <@> t_lv.annot in
           dbg_typ (show_lvalue pp_typ t_ai) lv.annot;
           t_ai
+      | AccVar _, _ ->
+          raise_semantic_error lv.annot "Not an array or reference to array"
       (* impossible case, grammar does not allow it *)
-      | _ ->
+      | AccIndex _, _ ->
           raise_semantic_error lv.annot "Cannot define multidimensional arrays")
 
 and check_binary_op op e1 e2 bo_pos cname scope =

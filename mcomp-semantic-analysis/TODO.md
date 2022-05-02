@@ -18,9 +18,9 @@
 ## Typing rules TODOs
 - [ ] Booleans and characters cannot be converted to integers.
 - [ ] References to arrays and references to scalars are different types.
-- [ ] Arithmetic operators expect only integer values.
-- [ ] Logical operators expect only boolean values.
-- [ ] In `a[i]` we expect `a` to be an array or a reference to an array and `i` to be an integer value.
+- [x] Arithmetic operators expect only integer values.
+- [x] Logical operators expect only boolean values.
+- [x] In `a[i]` we expect `a` to be an array or a reference to an array and `i` to be an integer value.
 - [ ] Only functions can be invoked.
 - [ ] A function call must provides a number of arguments equals to the parameters of the function.
 - [ ] Conditional guards in `if`, `while` and `for` statements expect boolean values.
