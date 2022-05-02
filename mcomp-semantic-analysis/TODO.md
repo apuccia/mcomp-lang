@@ -6,8 +6,8 @@
 - [ ] A component must implement all the members defined in the interfaces it provides (the types of the members must be the same).
 - [ ] The declarations inside a component are mutually recursive.
 - [ ] The interfaces used by a component must not lead to *ambiguous* names, i.e. names provided by different used interfaces.
-- [ ] A component can only provides and uses interfaces.
-- [ ] The name of an interface must occur only once in a `provides` and `uses` list.
+- [x] A component can only provides and uses interfaces.
+- [x] The name of an interface must occur only once in a `provides` and `uses` list.
 - [ ] A component may provide two interfaces that have members with the same name as long as these members have the same type.
 - [ ] Block can be nested and the declaration of a variable `x` in a inner block hides possible declarations in outer blocks.
 - [ ] Functions cannot be nested.

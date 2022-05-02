@@ -448,23 +448,45 @@ let app_provided = ref false
 let rec check_component_def c interfaces scope =
   match c.node with
   | ComponentDecl { cname; uses; provides; definitions } ->
+      (* Adding Prelude in uses clause, if it not explicitly used *)
       let uses =
         if Bool.not (List.mem "Prelude" uses) then "Prelude" :: uses else uses
       in
       if List.mem "Prelude" provides then
         raise_semantic_error c.annot "Can't provide interface Prelude";
+      (* check that interface App is provided by only one component *)
       if List.mem "App" provides then (
         if !app_provided then
           raise_semantic_error c.annot "App provided by multiple components";
         app_provided := true);
       if List.mem "App" uses then
         raise_semantic_error c.annot "Can't use interface App";
+      (* check that there aren't multiple occurrences of an interface in uses clause *)
       if Bool.not (check_no_reps uses) then
         raise_semantic_error c.annot
-          "Multiple occurrences of the same interface in uses";
+          "Multiple occurrences of the same interface in uses clause";
+      (* check that there aren't multiple occurrences of an interface in provides clause *)
       if Bool.not (check_no_reps provides) then
         raise_semantic_error c.annot
-          "Multiple occurrences of the same interface in provides";
+          "Multiple occurrences of the same interface in provides clause";
+
+      let names =
+        List.map
+          (fun x -> match x.node with InterfaceDecl y -> y.iname)
+          interfaces
+      in
+      (* check that in use clause we have only interfaces *)
+      List.iter
+        (fun x ->
+          if Bool.not (List.mem x names) then
+            raise_semantic_error c.annot "Not an interface in use clause")
+        uses;
+      (* check that in provides clause we have only interfaces *)
+      List.iter
+        (fun x ->
+          if Bool.not (List.mem x names) then
+            raise_semantic_error c.annot "Not an interface in provides clause")
+        provides;
       (* get provided interfaces declarations *)
       let provints_declarations =
         List.filter
