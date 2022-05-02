@@ -16,11 +16,15 @@ let raise_semantic_error pos msg =
     pos.end_line pos.start_column pos.end_column msg;
   raise (Semantic_error (pos, msg))
 
+let dbg_typ msg pos =
+  logger#debug "%s at lines %d:%d, columns %d:%d" msg pos.start_line
+    pos.end_line pos.start_column pos.end_column
+
 let ( <@> ) n f = { node = n; annot = f }
 let ints_scopes = Hashtbl.create 0
 let used_interfaces = Hashtbl.create 0
 
-let get_q cname ide pos =
+let get_interface_qualifier cname ide pos =
   let rec g l =
     match l with
     | [] -> raise_semantic_error pos "Qualifier not found"
@@ -58,7 +62,7 @@ let check_interface_decl i scope =
   | InterfaceDecl { iname; declarations } ->
       (* add declarations to scope of interface *)
       let iscope = begin_block scope in
-      let ideclarations =
+      let declarations =
         List.map (fun m -> check_member_decl m iscope) declarations
       in
       end_block iscope |> ignore;
@@ -66,37 +70,64 @@ let check_interface_decl i scope =
       (* add interface definition to scope *)
       add_entry iname (TInterface iname) scope |> ignore;
       (* return typed InterfaceDecl *)
-      InterfaceDecl { iname; declarations = ideclarations } <@> TInterface iname
+      let t_i = InterfaceDecl { iname; declarations } <@> TInterface iname in
+      dbg_typ (show_interface_decl pp_typ t_i) i.annot;
+      t_i
 
 let rec check_exp e cname scope =
   match e.node with
   | LV lv ->
       let t_lv = check_lvalue lv cname scope in
-      LV t_lv <@> t_lv.annot
+      let typed_lv = LV t_lv <@> t_lv.annot in
+      dbg_typ (show_expr pp_typ typed_lv) e.annot;
+      typed_lv
   | Assign (lv, e) ->
       let t_e = check_exp e cname scope in
       let t_lv = check_lvalue lv cname scope in
       if t_lv.annot != t_e.annot then
         raise_semantic_error e.annot "Not same type"
-      else Assign (t_lv, t_e) <@> t_lv.annot
-  | ILiteral i -> ILiteral i <@> TInt
-  | CLiteral c -> CLiteral c <@> TChar
-  | BLiteral b -> BLiteral b <@> TBool
+      else
+        let t_a = Assign (t_lv, t_e) <@> t_lv.annot in
+        dbg_typ (show_expr pp_typ t_a) e.annot;
+        t_a
+  | ILiteral i ->
+      let t_il = ILiteral i <@> TInt in
+      dbg_typ (show_expr pp_typ t_il) e.annot;
+      t_il
+  | CLiteral c ->
+      let t_cl = CLiteral c <@> TChar in
+      dbg_typ (show_expr pp_typ t_cl) e.annot;
+      t_cl
+  | BLiteral b ->
+      let t_bl = BLiteral b <@> TBool in
+      dbg_typ (show_expr pp_typ t_bl) e.annot;
+      t_bl
   | UnaryOp (op, e) -> (
       let t_e = check_exp e cname scope in
       match (op, t_e.annot) with
-      | Not, TBool -> UnaryOp (op, t_e.node <@> TBool) <@> TBool
+      | Not, TBool ->
+          let t_uo = UnaryOp (op, t_e.node <@> TBool) <@> TBool in
+          dbg_typ (show_expr pp_typ t_uo) e.annot;
+          t_uo
       | Not, _ ->
           raise_semantic_error e.annot
             "Not a valid expression for not operation"
-      | Neg, TInt -> UnaryOp (op, t_e.node <@> TInt) <@> TInt
+      | Neg, TInt ->
+          let t_uo = UnaryOp (op, t_e.node <@> TInt) <@> TInt in
+          dbg_typ (show_expr pp_typ t_uo) e.annot;
+          t_uo
       | Neg, _ ->
           raise_semantic_error e.annot
             "Not a valid expression for negative operation")
   | Address lv ->
       let t_lv = check_lvalue lv cname scope in
-      Address t_lv <@> t_lv.annot
-  | BinaryOp (op, e1, e2) -> check_binary_op op e1 e2 e.annot cname scope
+      let t_a = Address t_lv <@> t_lv.annot in
+      dbg_typ (show_expr pp_typ t_a) e.annot;
+      t_a
+  | BinaryOp (op, e1, e2) ->
+      let t_bo = check_binary_op op e1 e2 e.annot cname scope in
+      dbg_typ (show_expr pp_typ t_bo) e.annot;
+      t_bo
   | Call (_, ide_f, args) -> (
       let args_list = List.map (fun x -> check_exp x cname scope) args in
       try
@@ -112,13 +143,15 @@ let rec check_exp e cname scope =
                       "Arguments with different types wrt declaration of \
                        function")
                 args_list typ_args_list;
-              Call (None, ide_f, args_list) <@> rt
+              let t_c = Call (None, ide_f, args_list) <@> rt in
+              dbg_typ (show_expr pp_typ t_c) e.annot;
+              t_c
             with Invalid_argument _ ->
               raise_semantic_error e.annot
                 "Missing arguments for the function call")
         | _ -> raise_semantic_error e.annot "Not a function"
       with NotFoundEntry -> (
-        let q = get_q cname ide_f e.annot in
+        let q = get_interface_qualifier cname ide_f e.annot in
         match q with
         | iname, t -> (
             match t with
@@ -131,7 +164,9 @@ let rec check_exp e cname scope =
                           "Arguments with different types wrt declaration of \
                            function")
                     args_list typ_args_list;
-                  Call (Some iname, ide_f, args_list) <@> rt
+                  let t_c = Call (Some iname, ide_f, args_list) <@> rt in
+                  dbg_typ (show_expr pp_typ t_c) e.annot;
+                  t_c
                 with Invalid_argument _ ->
                   raise_semantic_error e.annot
                     "Missing arguments for the function call")
@@ -142,15 +177,24 @@ and check_lvalue lv cname scope =
   | AccVar (_, id2) -> (
       try
         let x = lookup id2 scope in
-        AccVar (None, id2) <@> x
+        let t_av = AccVar (None, id2) <@> x in
+        dbg_typ (show_lvalue pp_typ t_av) lv.annot;
+        t_av
       with NotFoundEntry -> (
-        let q = get_q cname id2 lv.annot in
-        match q with iname, t -> AccVar (Some iname, id2) <@> t))
+        let q = get_interface_qualifier cname id2 lv.annot in
+        match q with
+        | iname, t ->
+            let t_av = AccVar (Some iname, id2) <@> t in
+            dbg_typ (show_lvalue pp_typ t_av) lv.annot;
+            t_av))
   | AccIndex (lv', e) -> (
       let t_e = check_exp e cname scope in
       let t_lv = check_lvalue lv' cname scope in
       match t_lv.node with
-      | AccVar (_, _) -> AccIndex (t_lv, t_e) <@> t_lv.annot
+      | AccVar (_, _) ->
+          let t_ai = AccIndex (t_lv, t_e) <@> t_lv.annot in
+          dbg_typ (show_lvalue pp_typ t_ai) lv.annot;
+          t_ai
       (* impossible case, grammar does not allow it *)
       | _ ->
           raise_semantic_error lv.annot "Cannot define multidimensional arrays")
@@ -316,47 +360,62 @@ let rec check_stmt body cname fscope rtype =
       let t_s1 = check_stmt s1 cname fscope rtype in
       let t_s2 = check_stmt s2 cname fscope rtype in
       match t_e.annot with
-      | TBool -> If (t_e, t_s1, t_s2) <@> TVoid
+      | TBool ->
+          let t_if = If (t_e, t_s1, t_s2) <@> TVoid in
+          dbg_typ (show_stmt pp_typ t_if) body.annot;
+          t_if
       | _ -> raise_semantic_error e.annot "Not a boolean type for condition")
   | While (e, s) -> (
       let t_e = check_exp e cname fscope in
       let t_s = check_stmt s cname fscope rtype in
       match t_e.annot with
-      | TBool -> While (t_e, t_s) <@> t_s.annot
+      | TBool ->
+          let t_while = While (t_e, t_s) <@> TVoid in
+          dbg_typ (show_stmt pp_typ t_while) body.annot;
+          t_while
       | _ -> raise_semantic_error e.annot "Not a boolean type for condition")
   | Expr e ->
-      let t_e = check_exp e cname fscope in
-      Expr t_e <@> t_e.annot
+      let t_e = Expr (check_exp e cname fscope) <@> TVoid in
+      dbg_typ (show_stmt pp_typ t_e) body.annot;
+      t_e
   | Return e -> (
       match e with
       | None ->
-          if Option.get rtype == TVoid then Return None <@> TVoid
+          if Option.get rtype == TVoid then (
+            let t_r = Return None <@> TVoid in
+            dbg_typ (show_stmt pp_typ t_r) body.annot;
+            t_r)
           else
             raise_semantic_error body.annot
               "Returned type not matching function return type"
       | Some v ->
           let t_e = check_exp v cname fscope in
-          if t_e.annot == Option.get rtype then Return (Some t_e) <@> t_e.annot
+          if t_e.annot == Option.value rtype ~default:TVoid then (
+            let t_r = Return (Some t_e) <@> t_e.annot in
+            dbg_typ (show_stmt pp_typ t_r) body.annot;
+            t_r)
           else
             raise_semantic_error v.annot
               "Returned type not matching function return type")
-  | Block sordec -> check_ordec_list sordec cname fscope
+  | Block sordec -> check_ordec_list sordec cname fscope rtype
   | Skip -> Skip <@> TVoid
 
-and check_ordec_list stmt_list cname scope =
+and check_ordec_list stmt_list cname scope rtype =
   let bscope = begin_block scope in
   let t_stmts =
     List.map
       (fun s ->
         match s.node with
-        | LocalDecl vdecl -> (
-            match vdecl with
-            | i, t ->
-                add_entry i t bscope |> ignore;
-                LocalDecl vdecl <@> t)
+        | LocalDecl (i, t) ->
+            add_entry i t bscope |> ignore;
+            let typed_ld = LocalDecl (i, t) <@> t in
+            dbg_typ (show_stmtordec pp_typ typed_ld) s.annot;
+            typed_ld
         | Stmt st ->
-            let t_stmt = check_stmt st cname bscope None in
-            Stmt t_stmt <@> t_stmt.annot)
+            let t_stmt = check_stmt st cname bscope rtype in
+            let typed_stmt = Stmt t_stmt <@> t_stmt.annot in
+            dbg_typ (show_stmtordec pp_typ typed_stmt) s.annot;
+            typed_stmt)
       stmt_list
   in
   end_block bscope |> ignore;
@@ -369,14 +428,19 @@ let check_member_def m cname scope =
       let fscope = begin_block scope |> of_alist f.formals in
       (* f.body will be Some because we are considering the implementation *)
       let fbody = check_stmt (Option.get f.body) cname fscope (Some f.rtype) in
-      FunDecl
-        {
-          rtype = f.rtype;
-          fname = f.fname;
-          formals = f.formals;
-          body = Some fbody;
-        }
-      <@> TFun (List.map (fun m -> match m with _, t -> t) f.formals, f.rtype)
+      let f_typed =
+        FunDecl
+          {
+            rtype = f.rtype;
+            fname = f.fname;
+            formals = f.formals;
+            body = Some fbody;
+          }
+        <@> TFun
+              (List.map (fun m -> match m with _, t -> t) f.formals, f.rtype)
+      in
+      dbg_typ (show_member_decl pp_typ f_typed) m.annot;
+      f_typed
   | VarDecl v -> check_vardecl v m.annot
 
 let rec check_component_def c interfaces scope =
@@ -386,20 +450,33 @@ let rec check_component_def c interfaces scope =
       let provints_declarations =
         List.filter
           (fun x ->
-            match x.node with
-            | InterfaceDecl { iname; _ } -> List.mem iname provides)
+            match x.node with InterfaceDecl y -> List.mem y.iname provides)
           interfaces
         |> List.map (fun x ->
-               match x.node with
-               | InterfaceDecl { iname = _; declarations } -> declarations)
+               match x.node with InterfaceDecl y -> y.declarations)
         |> List.flatten
       in
+      Hashtbl.add used_interfaces cname uses;
       (* check that all provided definitions are implemented *)
       List.iter
         (fun x ->
-          if List.mem x.node (List.map (fun y -> y.node) definitions) then ()
-          else
-            raise_semantic_error x.annot "Function not implemented")
+          if
+            List.mem x.node
+              (List.map
+                 (fun y ->
+                   match y.node with
+                   | FunDecl f ->
+                       FunDecl
+                         {
+                           rtype = f.rtype;
+                           fname = f.fname;
+                           formals = f.formals;
+                           body = Option.None;
+                         }
+                   | _ -> y.node)
+                 definitions)
+          then ()
+          else raise_semantic_error x.annot "Function not implemented")
         provints_declarations;
       (* check to see if there are declarations with same name but different types *)
       if Bool.not (check_same_types provints_declarations) then
@@ -407,16 +484,19 @@ let rec check_component_def c interfaces scope =
           "Conflicting names in definitions of provided interfaces";
       (* add definitions to component scope *)
       let cscope = begin_block scope in
-      add_entry cname (TComponent cname) scope |> ignore;
-      let cdefinitions =
+      let definitions =
         List.map (fun m -> check_member_def m cname cscope) definitions
       in
       end_block cscope |> ignore;
       (* add component definition to scope *)
-      Hashtbl.add used_interfaces cname uses;
+      add_entry cname (TComponent cname) scope |> ignore;
       (* return typed ComponentDecl *)
-      ComponentDecl { cname; uses; provides; definitions = cdefinitions }
-      <@> TComponent cname
+      let t_c =
+        ComponentDecl { cname; uses; provides; definitions }
+        <@> TComponent cname
+      in
+      dbg_typ (show_component_decl pp_typ t_c) c.annot;
+      t_c
 
 and check_same_types decs =
   match decs with
@@ -432,13 +512,7 @@ and check_same_types decs =
                   || (f.rtype == f'.rtype && f.formals == f'.formals)
               | VarDecl _ -> true)
             xs
-      | VarDecl (i, t) ->
-          List.for_all
-            (fun y ->
-              match y.node with
-              | VarDecl (i', t') -> i != i' || t == t'
-              | FunDecl _ -> true)
-            xs)
+      | VarDecl _ -> true)
 
 let rec check_connection_decl c cmps scope =
   match c with
@@ -458,6 +532,7 @@ let rec check_connection_decl c cmps scope =
            failwith "the interface is not used"
        with NotFoundEntry -> failwith "interface not found");
 
+      dbg_typ (show_connection c) dummy_code_pos;
       Link (c1, used_int, c2, provided_int)
 
 and check_notusedprovided_int component interface l =
@@ -465,7 +540,7 @@ and check_notusedprovided_int component interface l =
   | [] -> true
   | x :: xs -> (
       match x.node with
-      | ComponentDecl { cname; uses; provides; definitions = _ } ->
+      | ComponentDecl { cname; uses; provides; _ } ->
           if component == cname then
             Bool.not (List.mem interface uses || List.mem interface provides)
           else check_notusedprovided_int component interface xs)
@@ -487,9 +562,13 @@ let type_check (CompilationUnit decls : code_pos compilation_unit) =
     |> add_entry "App" (TInterface "App")
   in
 
+  logger#info "Added Prelude and App interface into global scope";
+
   begin_block global_scope |> of_alist prelude_signature |> end_block |> ignore;
+  logger#info "Added Prelude definitions into Prelude scope";
 
   begin_block global_scope |> of_alist app_signature |> end_block |> ignore;
+  logger#info "Added App definitions into global scope";
 
   check_top_decls decls.interfaces decls.components decls.connections
     global_scope
