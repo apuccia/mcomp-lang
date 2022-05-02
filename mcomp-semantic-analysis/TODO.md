@@ -1,7 +1,7 @@
 ## Semantic rules TODOs
-- [ ] Interfaces and components define their own scope.
-- [ ] Interfaces and components cannot be nested.
-- [ ] There is a global scope that contains interface and component declarations.
+- [x] Interfaces and components define their own scope.
+- [x] Interfaces and components cannot be nested.
+- [x] There is a global scope that contains interface and component declarations.
 - [ ] The declarations inside the global scope are mutually recursive.
 - [ ] A component must implement all the members defined in the interfaces it provides (the types of the members must be the same).
 - [ ] The declarations inside a component are mutually recursive.
@@ -12,8 +12,8 @@
 - [ ] Block can be nested and the declaration of a variable `x` in a inner block hides possible declarations in outer blocks.
 - [ ] Functions cannot be nested.
 - [ ] No function overloading.
-- [ ] The interface `App` can be provided by only one component and never used.
-- [ ] There exists a `Prelude` component that provides two library functions to perform I/O operations: *print(v : int)* and *getint() : int*. The `Prelude` interface is implicitly used by all components, and it cannot be provided by any component. 
+- [x] The interface `App` can be provided by only one component and never used.
+- [x] There exists a `Prelude` component that provides two library functions to perform I/O operations: *print(v : int)* and *getint() : int*. The `Prelude` interface is implicitly used by all components, and it cannot be provided by any component. 
 
 ## Typing rules TODOs
 - [ ] Booleans and characters cannot be converted to integers.

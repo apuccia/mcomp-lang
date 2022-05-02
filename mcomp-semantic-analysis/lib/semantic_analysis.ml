@@ -443,9 +443,28 @@ let check_member_def m cname scope =
       f_typed
   | VarDecl v -> check_vardecl v m.annot
 
+let app_provided = ref false
+
 let rec check_component_def c interfaces scope =
   match c.node with
   | ComponentDecl { cname; uses; provides; definitions } ->
+      let uses =
+        if Bool.not (List.mem "Prelude" uses) then "Prelude" :: uses else uses
+      in
+      if List.mem "Prelude" provides then
+        raise_semantic_error c.annot "Can't provide interface Prelude";
+      if List.mem "App" provides then (
+        if !app_provided then
+          raise_semantic_error c.annot "App provided by multiple components";
+        app_provided := true);
+      if List.mem "App" uses then
+        raise_semantic_error c.annot "Can't use interface App";
+      if Bool.not (check_no_reps uses) then
+        raise_semantic_error c.annot
+          "Multiple occurrences of the same interface in uses";
+      if Bool.not (check_no_reps provides) then
+        raise_semantic_error c.annot
+          "Multiple occurrences of the same interface in provides";
       (* get provided interfaces declarations *)
       let provints_declarations =
         List.filter
@@ -471,7 +490,7 @@ let rec check_component_def c interfaces scope =
                            rtype = f.rtype;
                            fname = f.fname;
                            formals = f.formals;
-                           body = Option.None;
+                           body = None;
                          }
                    | _ -> y.node)
                  definitions)
@@ -481,7 +500,7 @@ let rec check_component_def c interfaces scope =
       (* check to see if there are declarations with same name but different types *)
       if Bool.not (check_same_types provints_declarations) then
         raise_semantic_error c.annot
-          "Conflicting names in definitions of provided interfaces";
+          "Conflicts in definitions of provided interfaces";
       (* add definitions to component scope *)
       let cscope = begin_block scope in
       let definitions =
@@ -513,6 +532,11 @@ and check_same_types decs =
               | VarDecl _ -> true)
             xs
       | VarDecl _ -> true)
+
+and check_no_reps l =
+  match List.sort compare l with
+  | [] | [ _ ] -> true
+  | x :: y :: xs -> if x == y then false else check_no_reps xs
 
 let rec check_connection_decl c cmps scope =
   match c with
