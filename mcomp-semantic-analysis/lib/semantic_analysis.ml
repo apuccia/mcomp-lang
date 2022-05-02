@@ -57,9 +57,9 @@ let check_member_decl m scope =
   match m.node with
   | FunDecl f ->
       add_entry f.fname f.rtype scope |> ignore;
-      (match f.rtype with 
-      | (TInt | TBool | TChar | TVoid) -> 
-        raise_semantic_error m.annot "Not a valid return type for function"
+      (match f.rtype with
+      | TInt | TBool | TChar | TVoid ->
+          raise_semantic_error m.annot "Not a valid return type for function"
       | _ -> ());
       (* f.body will be None because we are in an interface *)
       FunDecl
@@ -93,22 +93,43 @@ let rec check_exp e cname scope =
       typed_lv
   | Assign (lv, e) ->
       let t_e = check_exp e cname scope in
+      (*
+         when a reference does not occur in the left hand-side of
+         an assignment, it is automatically dereferenced and
+         its type is T
+      *)
       let t_lv = check_lvalue lv cname scope in
-      (* array cannot be assigned *)
-      (match lv.node with
-      | AccVar (_, i) -> (
-          match lookup i scope with
-          | TArray _ ->
-              raise_semantic_error e.annot
-                "Can't assign an array to another array"
-          | _ -> ())
-      | _ -> ());
-      if t_lv.annot != t_e.annot then
-        raise_semantic_error e.annot "Not same type"
-      else
-        let t_a = Assign (t_lv, t_e) <@> t_lv.annot in
-        dbg_typ (show_expr pp_typ t_a) e.annot;
-        t_a
+
+      let t_a =
+        match (t_lv.annot, t_e.annot) with
+        (*
+           when a reference does not occur in the left hand-side of
+           an assignment, it is automatically dereferenced and
+           its type is T
+        *)
+        | TInt, (TInt | TRef TInt) ->
+            Assign (t_lv, t_e.node <@> TInt) <@> t_lv.annot
+        | TChar, (TChar | TRef TChar) ->
+            Assign (t_lv, t_e.node <@> TChar) <@> t_lv.annot
+        | TBool, (TBool | TRef TBool) ->
+            Assign (t_lv, t_e.node <@> TBool) <@> t_lv.annot
+        (*
+          When a reference x of type T& is on the left hand-side of
+          an assignment: if e has type T&, the assignment is well typed
+        *)
+        | TRef TInt, TInt | TRef TChar, TChar | TRef TBool, TBool ->
+            Assign (t_lv, t_e) <@> t_lv.annot
+        (*
+          When a reference x of type T& is on the left hand-side of
+          an assignment: if e has type T, the assignment is well typed
+        *)
+        | TRef TInt, TRef TInt | TRef TChar, TRef TChar | TRef TBool, TRef TBool
+          ->
+            Assign (t_lv, t_e) <@> t_lv.annot
+        | _ -> raise_semantic_error e.annot "Incompatible expressions"
+      in
+      dbg_typ (show_expr pp_typ t_a) e.annot;
+      t_a
   | ILiteral i ->
       let t_il = ILiteral i <@> TInt in
       dbg_typ (show_expr pp_typ t_il) e.annot;
