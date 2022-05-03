@@ -67,7 +67,7 @@
 
 (* Declaration of regular expressions *)
 
-let exa = "0x"?
+let exa = "0x"
 let digit = ['0' - '9']
 let upper = ['A' - 'Z']
 let lower = ['a' - 'z']
@@ -82,12 +82,21 @@ let id = (upper | lower)['a' - 'z' 'A' - 'Z' '0' - '9' '_']*
 (* Declaration of scanner functions *)
 
 rule next_token = parse
-| exa digit+ as inum    
+| exa? digit+ as inum    
   {
-    let integer = Int32.of_string inum
-    in
-      logger#info "Recognized integer literal T_INT(%ld)" integer;
-      T_INT(integer)
+    try 
+      let integer = Int32.of_string inum
+      in
+        logger#info "Recognized integer literal T_INT(%ld)" integer;
+        T_INT(integer)
+    with
+    | Failure(_) -> 
+      let init_pos = Lexing.lexeme_start_p lexbuf in
+      let end_pos = Lexing.lexeme_end_p lexbuf in
+      let sc = init_pos.pos_cnum - init_pos.pos_bol in
+      let ec = end_pos.pos_cnum - end_pos.pos_bol in
+      raise (Lexing_error (generate_pos init_pos.pos_lnum sc ec,
+        "Value " ^ inum ^ " overflow"))
   }
 | '\''          
   { character lexbuf }
