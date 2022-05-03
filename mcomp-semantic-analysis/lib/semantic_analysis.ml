@@ -141,27 +141,23 @@ let rec check_exp e cname scope =
       let t_lv = check_lvalue lv cname scope in
 
       let t_a =
-        match (t_lv.annot, t_e.annot) with
+        match t_lv.annot, t_e.annot with
         (*
-           when a reference does not occur in the left hand-side of
-           an assignment, it is automatically dereferenced and
-           its type is T
+          when a reference does not occur in the left hand-side of
+          an assignment, it is automatically dereferenced and
+          its type is T
         *)
-        | TInt, (TInt | TRef TInt) ->
-            Assign (t_lv, t_e.node <@> TInt) <@> t_lv.annot
-        | TChar, (TChar | TRef TChar) ->
-            Assign (t_lv, t_e.node <@> TChar) <@> t_lv.annot
-        | TBool, (TBool | TRef TBool) ->
-            Assign (t_lv, t_e.node <@> TBool) <@> t_lv.annot
+        | TInt, (TInt | TRef TInt) | TChar, (TChar | TRef TChar) | TBool, (TBool | TRef TBool)->
+            Assign (t_lv, t_e) <@> t_lv.annot
         (*
-          When a reference x of type T& is on the left hand-side of
-          an assignment: if e has type T&, the assignment is well typed
+          when a reference x of type T& is on the left hand-side of
+          an assignment: if e has type T, the assignment is well typed
         *)
         | TRef TInt, TInt | TRef TChar, TChar | TRef TBool, TBool ->
             Assign (t_lv, t_e) <@> t_lv.annot
         (*
-          When a reference x of type T& is on the left hand-side of
-          an assignment: if e has type T, the assignment is well typed
+          when a reference x of type T& is on the left hand-side of
+          an assignment: if e has type T&, the assignment is well typed
         *)
         | TRef TInt, TRef TInt | TRef TChar, TRef TChar | TRef TBool, TRef TBool
           ->
@@ -297,8 +293,8 @@ and check_lvalue lv cname scope =
       let t_lv = check_lvalue lv' cname scope in
       match (t_lv.node, t_lv.annot) with
       (* in a[i] we expect a to be to be an array or a reference to an array *)
-      | AccVar _, (TArray _ | TRef (TArray _)) ->
-          let t_ai = AccIndex (t_lv, t_e) <@> t_lv.annot in
+      | AccVar _, (TArray (t, _) | TRef (TArray (t, _))) ->
+          let t_ai = AccIndex (t_lv, t_e) <@> t in
           dbg_typ (show_lvalue pp_typ t_ai) lv.annot;
           t_ai
       | AccVar _, _ ->
