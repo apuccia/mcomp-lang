@@ -217,7 +217,7 @@ top_declaration:
         "Components must start with a capital letter" 
     )
 	}
-| "connect" l = link ";"
+| "connect" l = link
   { 
     logger#info "Reducing: connect link; -> top_declaration";
     logger#debug "Number of links: 1";
@@ -225,18 +225,18 @@ top_declaration:
     Conns([l]) 
   } 
 | "connect" 
-  "{" l_list = separated_list(";", link) "}"
+  "{" l_list = list(link) "}"
   { 
     logger#info 
       "Reducing: connect { (link ;)* } -> top_declaration";
     logger#debug "Number of links: %d" (List.length l_list);
 
-    Conns(l_list) 
+    Conns(l_list)
   }
 ;
 
 link:
-| c1 = ID "." c1_use = ID "<-" c2 = ID "." c2_provide = ID
+| c1 = ID "." c1_use = ID "<-" c2 = ID "." c2_provide = ID ";"
   { 
     let pos = to_code_position($startpos, $endpos) in 
       if is_upper c1.[0] then 
