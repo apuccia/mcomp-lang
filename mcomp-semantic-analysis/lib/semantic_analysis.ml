@@ -377,7 +377,8 @@ and check_binary_op op e1 e2 bo_pos cname scope =
       raise_semantic_error bo_pos
         "Invalid operands types in both expressions for equal"
   (* Not Equal *)
-  | Neq, TInt, TInt | Neq, TBool, TBool -> BinaryOp (op, t_e1, t_e2) <@> t_e1.annot
+  | Neq, TInt, TInt | Neq, TBool, TBool ->
+      BinaryOp (op, t_e1, t_e2) <@> t_e1.annot
   | Neq, (TInt | TBool), _ ->
       raise_semantic_error e2.annot
         "Invalid operand type at right expression for not equal"
@@ -388,7 +389,8 @@ and check_binary_op op e1 e2 bo_pos cname scope =
       raise_semantic_error bo_pos
         "Invalid operands types in both expressions for not equal"
   (* Less *)
-  | Less, TInt, TInt | Less, TBool, TBool -> BinaryOp (op, t_e1, t_e2) <@> t_e1.annot
+  | Less, TInt, TInt | Less, TBool, TBool ->
+      BinaryOp (op, t_e1, t_e2) <@> t_e1.annot
   | Less, (TInt | TBool), _ ->
       raise_semantic_error e2.annot
         "Invalid operand type at right expression for less"
@@ -399,7 +401,8 @@ and check_binary_op op e1 e2 bo_pos cname scope =
       raise_semantic_error bo_pos
         "Invalid operands types in both expressions for less"
   (* Less And Equal *)
-  | Leq, TInt, TInt | Leq, TBool, TBool -> BinaryOp (op, t_e1, t_e2) <@> t_e1.annot
+  | Leq, TInt, TInt | Leq, TBool, TBool ->
+      BinaryOp (op, t_e1, t_e2) <@> t_e1.annot
   | Leq, (TInt | TBool), _ ->
       raise_semantic_error e2.annot
         "Invalid operand type at right expression for less and equal"
@@ -410,7 +413,8 @@ and check_binary_op op e1 e2 bo_pos cname scope =
       raise_semantic_error bo_pos
         "Invalid operands types in both expressions for less and equal"
   (* Greater *)
-  | Greater, TInt, TInt | Greater, TBool, TBool -> BinaryOp (op, t_e1, t_e2) <@> t_e1.annot
+  | Greater, TInt, TInt | Greater, TBool, TBool ->
+      BinaryOp (op, t_e1, t_e2) <@> t_e1.annot
   | Greater, (TInt | TBool), _ ->
       raise_semantic_error e2.annot
         "Invalid operand type at right expression for greater"
@@ -421,7 +425,8 @@ and check_binary_op op e1 e2 bo_pos cname scope =
       raise_semantic_error bo_pos
         "Invalid operands types in both expressions for greater"
   (* Greater And Equal *)
-  | Geq, TInt, TInt | Geq, TBool, TBool -> BinaryOp (op, t_e1, t_e2) <@> t_e1.annot
+  | Geq, TInt, TInt | Geq, TBool, TBool ->
+      BinaryOp (op, t_e1, t_e2) <@> t_e1.annot
   | Geq, (TInt | TBool), _ ->
       raise_semantic_error e2.annot
         "Invalid operand type at right expression for greater and equal"
@@ -529,7 +534,10 @@ and check_ordec_list stmt_list cname scope rtype =
 let check_member_def m cname scope =
   match m.node with
   | FunDecl f ->
-      let fscope = begin_block scope |> of_alist f.formals in
+      let fscope = begin_block scope in
+      (try of_alist f.formals fscope |> ignore
+       with DuplicateEntry _ ->
+         raise_semantic_error m.annot "Duplicate formal argument");
       if Bool.not (check_fun_formals f.formals) then
         raise_semantic_error m.annot "Not a valid argument type for function";
       (* f.body will be Some because we are considering the implementation *)
