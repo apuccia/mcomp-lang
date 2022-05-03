@@ -53,19 +53,52 @@ let check_vardecl v pos =
       raise_semantic_error pos
         "Void is not an allowed type for variable declaration"
 
+let rec check_fun_formals args =
+  match args with
+  | [] -> true
+  | ( _,
+      ( TInt | TBool | TChar
+      | TRef
+          ( TInt | TBool | TChar
+          | TArray (TInt, _)
+          | TArray (TBool, _)
+          | TArray (TChar, _) ) ) )
+    :: xs ->
+      check_fun_formals xs
+  | _ -> false
+
 let check_member_decl m scope =
   match m.node with
   | FunDecl f ->
       add_entry f.fname f.rtype scope |> ignore;
-      (match f.rtype with
-      | TInt | TBool | TChar | TVoid ->
-          raise_semantic_error m.annot "Not a valid return type for function"
-      | _ -> ());
-      (* f.body will be None because we are in an interface *)
-      FunDecl
-        { rtype = f.rtype; fname = f.fname; formals = f.formals; body = None }
-      <@> TFun (List.map (fun m -> match m with _, t -> t) f.formals, f.rtype)
-  | VarDecl v -> check_vardecl v m.annot
+      (*
+          f.body will be None because we are in an interface, f.rtype will be a
+          basic type due to grammar
+      *)
+      if Bool.not (check_fun_formals f.formals) then
+        raise_semantic_error m.annot "Not a valid argument type for function"
+      else
+        let t =
+          TFun (List.map (fun m -> match m with _, t -> t) f.formals, f.rtype)
+        in
+        let t_fd =
+          FunDecl
+            {
+              rtype = f.rtype;
+              fname = f.fname;
+              formals = f.formals;
+              body = None;
+            }
+          <@> t
+        in
+        add_entry f.fname t scope |> ignore;
+        dbg_typ (show_member_decl pp_typ t_fd) m.annot;
+        t_fd
+  | VarDecl ((i, _) as v) ->
+      let t_vd = check_vardecl v m.annot in
+      (* add entry to scope *)
+      add_entry i t_vd.annot scope |> ignore;
+      t_vd
 
 let check_interface_decl i scope =
   match i.node with
@@ -239,12 +272,15 @@ and check_lvalue lv cname scope =
         dbg_typ (show_lvalue pp_typ t_av) lv.annot;
         t_av
       with NotFoundEntry -> (
-        let q = get_interface_qualifier cname id2 lv.annot in
-        match q with
-        | iname, t ->
-            let t_av = AccVar (Some iname, id2) <@> t in
-            dbg_typ (show_lvalue pp_typ t_av) lv.annot;
-            t_av))
+        try
+          let q = get_interface_qualifier cname id2 lv.annot in
+          match q with
+          | iname, t ->
+              let t_av = AccVar (Some iname, id2) <@> t in
+              dbg_typ (show_lvalue pp_typ t_av) lv.annot;
+              t_av
+        with Not_found ->
+          raise_semantic_error lv.annot "Variable not declared"))
   | AccIndex (lv', e) -> (
       let t_e = check_exp e cname scope in
       (* in a[i] we expect i to be an integer value *)
@@ -493,8 +529,14 @@ let check_member_def m cname scope =
   | FunDecl f ->
       add_entry f.fname f.rtype scope |> ignore;
       let fscope = begin_block scope |> of_alist f.formals in
+      if Bool.not (check_fun_formals f.formals) then
+        raise_semantic_error m.annot "Not a valid argument type for function";
       (* f.body will be Some because we are considering the implementation *)
       let fbody = check_stmt (Option.get f.body) cname fscope (Some f.rtype) in
+      end_block fscope |> ignore;
+      let t =
+        TFun (List.map (fun m -> match m with _, t -> t) f.formals, f.rtype)
+      in
       let f_typed =
         FunDecl
           {
@@ -503,12 +545,17 @@ let check_member_def m cname scope =
             formals = f.formals;
             body = Some fbody;
           }
-        <@> TFun
-              (List.map (fun m -> match m with _, t -> t) f.formals, f.rtype)
+        <@> t
       in
       dbg_typ (show_member_decl pp_typ f_typed) m.annot;
+      (* add entry to scope *)
+      add_entry f.fname t scope |> ignore;
       f_typed
-  | VarDecl v -> check_vardecl v m.annot
+  | VarDecl ((i, _) as v) ->
+      let t_vd = check_vardecl v m.annot in
+      (* add entry to scope *)
+      add_entry i t_vd.annot scope |> ignore;
+      t_vd
 
 let app_provided = ref false
 
