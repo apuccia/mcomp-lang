@@ -187,8 +187,7 @@ rule next_token = parse
   { next_token lexbuf }
 | '\n'          
   { logger#info "Recognized \\n"; Lexing.new_line lexbuf; next_token lexbuf }
-| eof           
-  { EOF }
+| eof { EOF }
 | _             
   { 
     let init_pos = Lexing.lexeme_start_p lexbuf in
@@ -206,6 +205,7 @@ and inline_comment = parse
     Lexing.new_line lexbuf;
     next_token lexbuf 
   }
+| eof { EOF }
 | _             
   { inline_comment lexbuf }
 and block_comment = parse (* ignore other nested comments *)
