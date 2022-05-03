@@ -60,9 +60,9 @@ let rec check_fun_formals args =
       ( TInt | TBool | TChar
       | TRef
           ( TInt | TBool | TChar
-          | TArray (TInt, _)
-          | TArray (TBool, _)
-          | TArray (TChar, _) ) ) )
+          | TArray (TInt, None)
+          | TArray (TBool, None)
+          | TArray (TChar, None) ) ) )
     :: xs ->
       check_fun_formals xs
   | _ -> false
@@ -74,20 +74,22 @@ let check_member_decl m scope =
           f.body will be None because we are in an interface, f.rtype will be a
           basic type due to grammar
       *)
-      if Bool.not (check_fun_formals f.formals) then
+      let formals =
+        List.map
+          (fun (i, t) ->
+            match t with
+            | TArray (t', s) -> (i, TRef (TArray (t', s)))
+            | _ -> (i, t))
+          f.formals
+      in
+      if Bool.not (check_fun_formals formals) then
         raise_semantic_error m.annot "Not a valid argument type for function"
       else
         let t =
-          TFun (List.map (fun m -> match m with _, t -> t) f.formals, f.rtype)
+          TFun (List.map (fun m -> match m with _, t -> t) formals, f.rtype)
         in
         let t_fd =
-          FunDecl
-            {
-              rtype = f.rtype;
-              fname = f.fname;
-              formals = f.formals;
-              body = None;
-            }
+          FunDecl { rtype = f.rtype; fname = f.fname; formals; body = None }
           <@> t
         in
         (try add_entry f.fname t scope |> ignore
@@ -534,17 +536,25 @@ and check_ordec_list stmt_list cname scope rtype =
 let check_member_def m cname scope =
   match m.node with
   | FunDecl f ->
+      let formals =
+        List.map
+          (fun (i, t) ->
+            match t with
+            | TArray (t', s) -> (i, TRef (TArray (t', s)))
+            | _ -> (i, t))
+          f.formals
+      in
       let fscope = begin_block scope in
-      (try of_alist f.formals fscope |> ignore
+      (try of_alist formals fscope |> ignore
        with DuplicateEntry _ ->
          raise_semantic_error m.annot "Duplicate formal argument");
-      if Bool.not (check_fun_formals f.formals) then
+      if Bool.not (check_fun_formals formals) then
         raise_semantic_error m.annot "Not a valid argument type for function";
       (* f.body will be Some because we are considering the implementation *)
       let fbody = check_stmt (Option.get f.body) cname fscope (Some f.rtype) in
       end_block fscope |> ignore;
       let t =
-        TFun (List.map (fun m -> match m with _, t -> t) f.formals, f.rtype)
+        TFun (List.map (fun m -> match m with _, t -> t) formals, f.rtype)
       in
       let f_typed =
         FunDecl
