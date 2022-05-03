@@ -201,12 +201,21 @@ rule next_token = parse
   }
 and inline_comment = parse
 | '\n'          
-  { logger#info "Finished recognizing inline comment"; next_token lexbuf }
+  { 
+    logger#info "Finished recognizing inline comment"; 
+    Lexing.new_line lexbuf;
+    next_token lexbuf 
+  }
 | _             
   { inline_comment lexbuf }
 and block_comment = parse (* ignore other nested comments *)
 | "*/"          
   { logger#info "Finished recognizing block comment"; next_token lexbuf }
+| '\n' 
+  {
+    Lexing.new_line lexbuf;
+    block_comment lexbuf
+  }
 | eof           
   { 
     let init_pos = Lexing.lexeme_start_p lexbuf in
