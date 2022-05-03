@@ -70,7 +70,6 @@ let rec check_fun_formals args =
 let check_member_decl m scope =
   match m.node with
   | FunDecl f ->
-      add_entry f.fname f.rtype scope |> ignore;
       (*
           f.body will be None because we are in an interface, f.rtype will be a
           basic type due to grammar
@@ -91,13 +90,17 @@ let check_member_decl m scope =
             }
           <@> t
         in
-        add_entry f.fname t scope |> ignore;
+        (try add_entry f.fname t scope |> ignore
+         with DuplicateEntry _ ->
+           raise_semantic_error m.annot "Function already defined");
         dbg_typ (show_member_decl pp_typ t_fd) m.annot;
         t_fd
   | VarDecl ((i, _) as v) ->
       let t_vd = check_vardecl v m.annot in
       (* add entry to scope *)
-      add_entry i t_vd.annot scope |> ignore;
+      (try add_entry i t_vd.annot scope |> ignore
+       with DuplicateEntry _ ->
+         raise_semantic_error m.annot "Variable already defined");
       t_vd
 
 let check_interface_decl i scope =
@@ -111,7 +114,9 @@ let check_interface_decl i scope =
       end_block iscope |> ignore;
       Hashtbl.add ints_scopes iname iscope;
       (* add interface definition to scope *)
-      add_entry iname (TInterface iname) scope |> ignore;
+      (try add_entry iname (TInterface iname) scope |> ignore
+       with DuplicateEntry _ ->
+         raise_semantic_error i.annot "Interface already defined");
       (* return typed InterfaceDecl *)
       let t_i = InterfaceDecl { iname; declarations } <@> TInterface iname in
       dbg_typ (show_interface_decl pp_typ t_i) i.annot;
@@ -510,7 +515,9 @@ and check_ordec_list stmt_list cname scope rtype =
       (fun s ->
         match s.node with
         | LocalDecl (i, t) ->
-            add_entry i t bscope |> ignore;
+            (try add_entry i t bscope |> ignore
+             with DuplicateEntry _ ->
+               raise_semantic_error s.annot "Variable already defined");
             let typed_ld = LocalDecl (i, t) <@> t in
             dbg_typ (show_stmtordec pp_typ typed_ld) s.annot;
             typed_ld
@@ -527,7 +534,6 @@ and check_ordec_list stmt_list cname scope rtype =
 let check_member_def m cname scope =
   match m.node with
   | FunDecl f ->
-      add_entry f.fname f.rtype scope |> ignore;
       let fscope = begin_block scope |> of_alist f.formals in
       if Bool.not (check_fun_formals f.formals) then
         raise_semantic_error m.annot "Not a valid argument type for function";
@@ -549,12 +555,16 @@ let check_member_def m cname scope =
       in
       dbg_typ (show_member_decl pp_typ f_typed) m.annot;
       (* add entry to scope *)
-      add_entry f.fname t scope |> ignore;
+      (try add_entry f.fname t scope |> ignore
+       with DuplicateEntry _ ->
+         raise_semantic_error m.annot "Function already defined");
       f_typed
   | VarDecl ((i, _) as v) ->
       let t_vd = check_vardecl v m.annot in
       (* add entry to scope *)
-      add_entry i t_vd.annot scope |> ignore;
+      (try add_entry i t_vd.annot scope |> ignore
+       with DuplicateEntry _ ->
+         raise_semantic_error m.annot "Variable already defined");
       t_vd
 
 let app_provided = ref false
@@ -645,7 +655,9 @@ let rec check_component_def c interfaces scope =
       in
       end_block cscope |> ignore;
       (* add component definition to scope *)
-      add_entry cname (TComponent cname) scope |> ignore;
+      (try add_entry cname (TComponent cname) scope |> ignore
+       with DuplicateEntry _ ->
+         raise_semantic_error c.annot "Component already defined");
       (* return typed ComponentDecl *)
       let t_c =
         ComponentDecl { cname; uses; provides; definitions }
