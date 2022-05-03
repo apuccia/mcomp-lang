@@ -536,6 +536,15 @@ and check_ordec_list stmt_list cname scope rtype =
 let check_member_def m cname scope =
   match m.node with
   | FunDecl f ->
+      (* no function overloading *)
+      List.iter
+        (fun i ->
+          let scope = Hashtbl.find ints_scopes i in
+          try
+            let _ = lookup f.fname scope |> ignore in
+            raise_semantic_error m.annot "No function overloading"
+          with NotFoundEntry -> ())
+        (Hashtbl.find used_interfaces cname);
       let formals =
         List.map
           (fun (i, t) ->
@@ -750,10 +759,14 @@ let type_check (CompilationUnit decls : code_pos compilation_unit) =
 
   logger#info "Added Prelude and App interface into global scope";
 
-  begin_block global_scope |> of_alist prelude_signature |> end_block |> ignore;
+  let p = begin_block global_scope |> of_alist prelude_signature in
+  end_block p |> ignore;
+  Hashtbl.add ints_scopes "Prelude" p;
   logger#info "Added Prelude definitions into Prelude scope";
 
-  begin_block global_scope |> of_alist app_signature |> end_block |> ignore;
+  let a = begin_block global_scope |> of_alist app_signature in
+  end_block a |> ignore;
+  Hashtbl.add ints_scopes "App" a;
   logger#info "Added App definitions into global scope";
 
   check_top_decls decls.interfaces decls.components decls.connections

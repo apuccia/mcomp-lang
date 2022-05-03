@@ -11,7 +11,7 @@
 - [ ] A component may provide two interfaces that have members with the same name as long as these members have the same type.
 - [ ] Block can be nested and the declaration of a variable `x` in a inner block hides possible declarations in outer blocks.
 - [ ] Functions cannot be nested.
-- [ ] No function overloading.
+- [x] No function overloading.
 - [x] The interface `App` can be provided by only one component and never used.
 - [x] There exists a `Prelude` component that provides two library functions to perform I/O operations: *print(v : int)* and *getint() : int*. The `Prelude` interface is implicitly used by all components, and it cannot be provided by any component. 
 
