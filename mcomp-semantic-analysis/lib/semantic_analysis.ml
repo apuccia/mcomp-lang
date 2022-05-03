@@ -705,46 +705,12 @@ and check_no_reps l =
   | [] | [ _ ] -> true
   | x :: y :: xs -> if x == y then false else check_no_reps xs
 
-let rec check_connection_decl c cmps scope =
-  match c with
-  | Link (c1, used_int, c2, provided_int) ->
-      (try lookup c1 scope |> ignore
-       with NotFoundEntry -> failwith "component not found");
-      (try lookup c2 scope |> ignore
-       with NotFoundEntry -> failwith "component not found");
-      (try
-         lookup used_int scope |> ignore;
-         if check_notusedprovided_int c1 used_int cmps then
-           failwith "the interface is not used"
-       with NotFoundEntry -> failwith "interface not found");
-      (try
-         lookup provided_int scope |> ignore;
-         if check_notusedprovided_int c2 provided_int cmps then
-           failwith "the interface is not used"
-       with NotFoundEntry -> failwith "interface not found");
-
-      dbg_typ (show_connection c) dummy_code_pos;
-      Link (c1, used_int, c2, provided_int)
-
-and check_notusedprovided_int component interface l =
-  match l with
-  | [] -> true
-  | x :: xs -> (
-      match x.node with
-      | ComponentDecl { cname; uses; provides; _ } ->
-          if component == cname then
-            Bool.not (List.mem interface uses || List.mem interface provides)
-          else check_notusedprovided_int component interface xs)
-
 let check_top_decls ints comps conns scope =
   let interfaces = List.map (fun i -> check_interface_decl i scope) ints in
   let components =
     List.map (fun cmp -> check_component_def cmp ints scope) comps
   in
-  let connections =
-    List.map (fun con -> check_connection_decl con components scope) conns
-  in
-  CompilationUnit { interfaces; components; connections }
+  CompilationUnit { interfaces; components; connections=conns }
 
 let type_check (CompilationUnit decls : code_pos compilation_unit) =
   let global_scope =
