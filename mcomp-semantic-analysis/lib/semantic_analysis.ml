@@ -141,13 +141,15 @@ let rec check_exp e cname scope =
       let t_lv = check_lvalue lv cname scope in
 
       let t_a =
-        match t_lv.annot, t_e.annot with
+        match (t_lv.annot, t_e.annot) with
         (*
           when a reference does not occur in the left hand-side of
           an assignment, it is automatically dereferenced and
           its type is T
         *)
-        | TInt, (TInt | TRef TInt) | TChar, (TChar | TRef TChar) | TBool, (TBool | TRef TBool)->
+        | TInt, (TInt | TRef TInt)
+        | TChar, (TChar | TRef TChar)
+        | TBool, (TBool | TRef TBool) ->
             Assign (t_lv, t_e) <@> t_lv.annot
         (*
           when a reference x of type T& is on the left hand-side of
@@ -217,13 +219,7 @@ let rec check_exp e cname scope =
                  function call must provides a number of arguments equals
                  to the parameters of the function
               *)
-              List.iter2
-                (fun x y ->
-                  if x.annot != y then
-                    raise_semantic_error e.annot
-                      "Arguments with different types wrt declaration of \
-                       function")
-                args_list typ_args_list;
+              check_fun_call e.annot args_list typ_args_list;
               let t_c = Call (None, ide_f, args_list) <@> rt in
               dbg_typ (show_expr pp_typ t_c) e.annot;
               t_c
@@ -245,13 +241,7 @@ let rec check_exp e cname scope =
               (* only functions can be invoked *)
               | TFun (typ_args_list, rt) -> (
                   try
-                    List.iter2
-                      (fun x y ->
-                        if x.annot != y then
-                          raise_semantic_error e.annot
-                            "Arguments with different types wrt declaration of \
-                             function")
-                      args_list typ_args_list;
+                    check_fun_call e.annot args_list typ_args_list;
                     let t_c = Call (Some iname, ide_f, args_list) <@> rt in
                     dbg_typ (show_expr pp_typ t_c) e.annot;
                     t_c
@@ -265,6 +255,25 @@ let rec check_exp e cname scope =
               | _ -> raise_semantic_error e.annot "Not a function")
         with Not_found ->
           raise_semantic_error e.annot "Could not find function definition"))
+
+and check_fun_call pos passed_args typ_args_list =
+  List.iter2
+    (fun x y ->
+      match x.annot, y with
+      | TInt, TInt
+      | TBool, TBool
+      | TChar, TChar
+      | TRef TInt, TRef TInt
+      | TRef TChar, TRef TChar
+      | TRef TBool, TRef TBool
+      | TArray (TInt, _), TRef (TArray (TInt, _))
+      | TArray (TBool, _), TRef (TArray (TBool, _))
+      | TArray (TChar, _), TRef (TArray (TChar, _)) ->
+          ()
+      | _ ->
+          raise_semantic_error pos
+            "Arguments with different types wrt declaration of function")
+    passed_args typ_args_list
 
 and check_lvalue lv cname scope =
   match lv.node with
@@ -710,7 +719,7 @@ let check_top_decls ints comps conns scope =
   let components =
     List.map (fun cmp -> check_component_def cmp ints scope) comps
   in
-  CompilationUnit { interfaces; components; connections=conns }
+  CompilationUnit { interfaces; components; connections = conns }
 
 let type_check (CompilationUnit decls : code_pos compilation_unit) =
   let global_scope =
