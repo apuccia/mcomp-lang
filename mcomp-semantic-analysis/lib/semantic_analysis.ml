@@ -17,7 +17,7 @@ let raise_semantic_error pos msg =
   raise (Semantic_error (pos, msg))
 
 let dbg_typ msg pos =
-  logger#debug "%s at lines %d:%d, columns %d:%d" msg pos.start_line
+  logger#debug "\n%s at lines %d:%d, columns %d:%d" msg pos.start_line
     pos.end_line pos.start_column pos.end_column
 
 let ( <@> ) n f = { node = n; annot = f }
@@ -27,7 +27,7 @@ let used_interfaces = Hashtbl.create 0
 let get_interface_qualifier cname ide pos =
   let rec g l =
     match l with
-    | [] -> raise_semantic_error pos "Qualifier not found"
+    | [] -> raise_semantic_error pos "Identifier is not defined"
     | x :: xs -> (
         let scope = Hashtbl.find ints_scopes x in
         try
@@ -39,14 +39,14 @@ let get_interface_qualifier cname ide pos =
 
 let check_vardecl v pos =
   match v with
-  | i, TInt -> VarDecl (i, TInt) <@> TInt
-  | i, TBool -> VarDecl (i, TBool) <@> TBool
-  | i, TChar -> VarDecl (i, TChar) <@> TChar
+  | i, TInt -> (i, TInt)
+  | i, TBool -> (i, TBool)
+  | i, TChar -> (i, TChar)
   | i, TArray (t, s) ->
       (* arrays should have a size of at least 1 element *)
-      if Option.get s >= 1 then VarDecl (i, TArray (t, s)) <@> TArray (t, s)
+      if Option.get s >= 1 then (i, TArray (t, s))
       else raise_semantic_error pos "Array should have a size of at least 1"
-  | i, TRef ((TInt | TBool | TChar) as t) -> VarDecl (i, TRef t) <@> TRef t
+  | i, TRef ((TInt | TBool | TChar) as t) -> (i, TRef t)
   | _, TRef _ ->
       raise_semantic_error pos "Can't declare a reference to an array"
   | _, _ ->
@@ -82,7 +82,7 @@ let check_member_decl m scope =
             | _ -> (i, t))
           f.formals
       in
-      if Bool.not (check_fun_formals formals) then
+      if not (check_fun_formals formals) then
         raise_semantic_error m.annot "Not a valid argument type for function"
       else
         let t =
@@ -97,8 +97,8 @@ let check_member_decl m scope =
            raise_semantic_error m.annot "Function already defined");
         dbg_typ (show_member_decl pp_typ t_fd) m.annot;
         t_fd
-  | VarDecl ((i, _) as v) ->
-      let t_vd = check_vardecl v m.annot in
+  | VarDecl ((i, t) as v) ->
+      let t_vd = VarDecl (check_vardecl v m.annot) <@> t in
       (* add entry to scope *)
       (try add_entry i t_vd.annot scope |> ignore
        with DuplicateEntry _ ->
@@ -219,9 +219,9 @@ let rec check_exp e cname scope =
                  function call must provides a number of arguments equals
                  to the parameters of the function
               *)
-              check_fun_call e.annot args_list typ_args_list;
               let t_c = Call (None, ide_f, args_list) <@> rt in
               dbg_typ (show_expr pp_typ t_c) e.annot;
+              check_fun_call e.annot args_list typ_args_list;
               t_c
             with Invalid_argument _ ->
               (*
@@ -241,9 +241,9 @@ let rec check_exp e cname scope =
               (* only functions can be invoked *)
               | TFun (typ_args_list, rt) -> (
                   try
-                    check_fun_call e.annot args_list typ_args_list;
                     let t_c = Call (Some iname, ide_f, args_list) <@> rt in
                     dbg_typ (show_expr pp_typ t_c) e.annot;
+                    check_fun_call e.annot args_list typ_args_list;
                     t_c
                   with Invalid_argument _ ->
                     (*
@@ -259,16 +259,17 @@ let rec check_exp e cname scope =
 and check_fun_call pos passed_args typ_args_list =
   List.iter2
     (fun x y ->
-      match x.annot, y with
+      match (x.annot, y) with
       | TInt, TInt
       | TBool, TBool
       | TChar, TChar
       | TRef TInt, TRef TInt
       | TRef TChar, TRef TChar
       | TRef TBool, TRef TBool
-      | TArray (TInt, _), TRef (TArray (TInt, _))
-      | TArray (TBool, _), TRef (TArray (TBool, _))
-      | TArray (TChar, _), TRef (TArray (TChar, _)) ->
+      | (TRef (TArray (TInt, _)) | TArray (TInt, _)), TRef (TArray (TInt, _))
+      | (TRef (TArray (TBool, _)) | TArray (TBool, _)), TRef (TArray (TBool, _))
+      | (TRef (TArray (TChar, _)) | TArray (TChar, _)), TRef (TArray (TChar, _))
+        ->
           ()
       | _ ->
           raise_semantic_error pos
@@ -296,7 +297,7 @@ and check_lvalue lv cname scope =
   | AccIndex (lv', e) -> (
       let t_e = check_exp e cname scope in
       (* in a[i] we expect i to be an integer value *)
-      if t_e.annot != TInt then
+      if not (equal_typ t_e.annot TInt) then
         raise_semantic_error e.annot
           "The expression within [ ] is not an integer";
       let t_lv = check_lvalue lv' cname scope in
@@ -373,7 +374,7 @@ and check_binary_op op e1 e2 bo_pos cname scope =
         "Invalid operands types in both expressions for mod"
   (* Equal *)
   | Equal, TInt, TInt | Equal, TBool, TBool ->
-      BinaryOp (op, t_e1, t_e2) <@> t_e1.annot
+      BinaryOp (op, t_e1, t_e2) <@> TBool
   | Equal, (TInt | TBool), _ ->
       raise_semantic_error e2.annot
         "Invalid operand type at right expression for equal"
@@ -396,8 +397,7 @@ and check_binary_op op e1 e2 bo_pos cname scope =
       raise_semantic_error bo_pos
         "Invalid operands types in both expressions for not equal"
   (* Less *)
-  | Less, TInt, TInt | Less, TBool, TBool ->
-      BinaryOp (op, t_e1, t_e2) <@> t_e1.annot
+  | Less, TInt, TInt | Less, TBool, TBool -> BinaryOp (op, t_e1, t_e2) <@> TBool
   | Less, (TInt | TBool), _ ->
       raise_semantic_error e2.annot
         "Invalid operand type at right expression for less"
@@ -408,8 +408,7 @@ and check_binary_op op e1 e2 bo_pos cname scope =
       raise_semantic_error bo_pos
         "Invalid operands types in both expressions for less"
   (* Less And Equal *)
-  | Leq, TInt, TInt | Leq, TBool, TBool ->
-      BinaryOp (op, t_e1, t_e2) <@> t_e1.annot
+  | Leq, TInt, TInt | Leq, TBool, TBool -> BinaryOp (op, t_e1, t_e2) <@> TBool
   | Leq, (TInt | TBool), _ ->
       raise_semantic_error e2.annot
         "Invalid operand type at right expression for less and equal"
@@ -421,7 +420,7 @@ and check_binary_op op e1 e2 bo_pos cname scope =
         "Invalid operands types in both expressions for less and equal"
   (* Greater *)
   | Greater, TInt, TInt | Greater, TBool, TBool ->
-      BinaryOp (op, t_e1, t_e2) <@> t_e1.annot
+      BinaryOp (op, t_e1, t_e2) <@> TBool
   | Greater, (TInt | TBool), _ ->
       raise_semantic_error e2.annot
         "Invalid operand type at right expression for greater"
@@ -432,8 +431,7 @@ and check_binary_op op e1 e2 bo_pos cname scope =
       raise_semantic_error bo_pos
         "Invalid operands types in both expressions for greater"
   (* Greater And Equal *)
-  | Geq, TInt, TInt | Geq, TBool, TBool ->
-      BinaryOp (op, t_e1, t_e2) <@> t_e1.annot
+  | Geq, TInt, TInt | Geq, TBool, TBool -> BinaryOp (op, t_e1, t_e2) <@> TBool
   | Geq, (TInt | TBool), _ ->
       raise_semantic_error e2.annot
         "Invalid operand type at right expression for greater and equal"
@@ -496,7 +494,7 @@ let rec check_stmt body cname fscope rtype =
   | Return e -> (
       match e with
       | None ->
-          if Option.get rtype == TVoid then (
+          if equal_typ (Option.get rtype) TVoid then (
             let t_r = Return None <@> TVoid in
             dbg_typ (show_stmt pp_typ t_r) body.annot;
             t_r)
@@ -505,7 +503,7 @@ let rec check_stmt body cname fscope rtype =
               "Returned type not matching function return type"
       | Some v ->
           let t_e = check_exp v cname fscope in
-          if t_e.annot == Option.value rtype ~default:TVoid then (
+          if equal_typ t_e.annot (Option.value rtype ~default:TVoid) then (
             let t_r = Return (Some t_e) <@> t_e.annot in
             dbg_typ (show_stmt pp_typ t_r) body.annot;
             t_r)
@@ -521,11 +519,11 @@ and check_ordec_list stmt_list cname scope rtype =
     List.map
       (fun s ->
         match s.node with
-        | LocalDecl (i, t) ->
+        | LocalDecl ((i, t) as v) ->
             (try add_entry i t bscope |> ignore
              with DuplicateEntry _ ->
                raise_semantic_error s.annot "Variable already defined");
-            let typed_ld = LocalDecl (i, t) <@> t in
+            let typed_ld = LocalDecl (check_vardecl v s.annot) <@> t in
             dbg_typ (show_stmtordec pp_typ typed_ld) s.annot;
             typed_ld
         | Stmt st ->
@@ -547,7 +545,8 @@ let check_member_def m cname scope =
           let scope = Hashtbl.find ints_scopes i in
           try
             let _ = lookup f.fname scope |> ignore in
-            raise_semantic_error m.annot "No function overloading"
+            raise_semantic_error m.annot
+              ("Function already defined in interface " ^ i)
           with NotFoundEntry -> ())
         (Hashtbl.find used_interfaces cname);
       let formals =
@@ -562,7 +561,7 @@ let check_member_def m cname scope =
       (try of_alist formals fscope |> ignore
        with DuplicateEntry _ ->
          raise_semantic_error m.annot "Duplicate formal argument");
-      if Bool.not (check_fun_formals formals) then
+      if not (check_fun_formals formals) then
         raise_semantic_error m.annot "Not a valid argument type for function";
       (* f.body will be Some because we are considering the implementation *)
       let fbody = check_stmt (Option.get f.body) cname fscope (Some f.rtype) in
@@ -586,8 +585,8 @@ let check_member_def m cname scope =
        with DuplicateEntry _ ->
          raise_semantic_error m.annot "Function already defined");
       f_typed
-  | VarDecl ((i, _) as v) ->
-      let t_vd = check_vardecl v m.annot in
+  | VarDecl ((i, t) as v) ->
+      let t_vd = VarDecl (check_vardecl v m.annot) <@> t in
       (* add entry to scope *)
       (try add_entry i t_vd.annot scope |> ignore
        with DuplicateEntry _ ->
@@ -601,23 +600,40 @@ let rec check_component_def c interfaces scope =
   | ComponentDecl { cname; uses; provides; definitions } ->
       (* Adding Prelude in uses clause, if it not explicitly used *)
       let uses =
-        if Bool.not (List.mem "Prelude" uses) then "Prelude" :: uses else uses
+        if not (List.mem "Prelude" uses) then "Prelude" :: uses else uses
       in
       if List.mem "Prelude" provides then
         raise_semantic_error c.annot "Can't provide interface Prelude";
       (* check that interface App is provided by only one component *)
+      let main = ref false in
       if List.mem "App" provides then (
         if !app_provided then
           raise_semantic_error c.annot "App provided by multiple components";
-        app_provided := true);
+
+        app_provided := true;
+        List.iter
+          (fun x ->
+            match x.node with
+            | FunDecl d ->
+                if
+                  equal_identifier d.fname "main"
+                  && List.length d.formals == 0
+                  && equal_typ d.rtype TInt
+                then main := true
+            | _ -> ())
+          definitions;
+
+        if not !main then
+          raise_semantic_error c.annot
+            "The component provides App but does not define main function");
       if List.mem "App" uses then
         raise_semantic_error c.annot "Can't use interface App";
       (* check that there aren't multiple occurrences of an interface in uses clause *)
-      if Bool.not (check_no_reps uses) then
+      if not (check_no_reps uses) then
         raise_semantic_error c.annot
           "Multiple occurrences of the same interface in uses clause";
       (* check that there aren't multiple occurrences of an interface in provides clause *)
-      if Bool.not (check_no_reps provides) then
+      if not (check_no_reps provides) then
         raise_semantic_error c.annot
           "Multiple occurrences of the same interface in provides clause";
 
@@ -630,58 +646,106 @@ let rec check_component_def c interfaces scope =
       (* check that in use clause we have only interfaces *)
       List.iter
         (fun x ->
-          if Bool.not (List.mem x names) then
+          if not (List.mem x names) then
             raise_semantic_error c.annot "Not an interface in use clause")
         uses;
       (* check that in provides clause we have only interfaces *)
       List.iter
         (fun x ->
-          if Bool.not (List.mem x names) then
+          if not (List.mem x names) then
             raise_semantic_error c.annot "Not an interface in provides clause")
         provides;
       (* get provided interfaces declarations *)
-      let provints_declarations =
-        List.filter
-          (fun x ->
-            match x.node with InterfaceDecl y -> List.mem y.iname provides)
-          interfaces
-        |> List.map (fun x ->
-               match x.node with InterfaceDecl y -> y.declarations)
-        |> List.flatten
-      in
+      let provints_declarations = get_declarations provides interfaces in
+      let usesints_declarations = get_declarations uses interfaces in
+      if not (check_ambiguities usesints_declarations) then
+        raise_semantic_error c.annot
+          "Conflicts in definitions of used interfaces";
+      if
+        not
+          (check_ambiguities
+             (List.append provints_declarations usesints_declarations
+             |> List.sort (fun x y ->
+                    match (x.node, y.node) with
+                    | FunDecl fd, FunDecl fd' -> compare fd.fname fd'.fname
+                    | VarDecl (i, _), VarDecl (i', _) -> compare i i'
+                    | FunDecl fd, VarDecl (i, _) -> compare fd.fname i
+                    | VarDecl (i, _), FunDecl fd -> compare i fd.fname)))
+      then
+        raise_semantic_error c.annot
+          "Conflicts in definitions of used interfaces";
       Hashtbl.add used_interfaces cname uses;
-      (* check that all provided definitions are implemented *)
-      List.iter
-        (fun x ->
-          if
-            List.mem x.node
-              (List.map
-                 (fun y ->
-                   match y.node with
-                   | FunDecl f ->
-                       FunDecl
-                         {
-                           rtype = f.rtype;
-                           fname = f.fname;
-                           formals = f.formals;
-                           body = None;
-                         }
-                   | _ -> y.node)
-                 definitions)
-          then ()
-          else raise_semantic_error x.annot "Function not implemented")
-        provints_declarations;
       (* check to see if there are declarations with same name but different types *)
-      if Bool.not (check_same_types provints_declarations) then
+      if not (check_same_types provints_declarations) then
         raise_semantic_error c.annot
           "Conflicts in definitions of provided interfaces";
+      (* remove possible duplicates from provided interface declarations *)
+      let provints_declarations =
+        let rec remove_dup l =
+          match l with
+          | [] -> []
+          | [ x ] -> [ x ]
+          | x :: y :: xs -> (
+              match (x.node, y.node) with
+              | FunDecl fd, FunDecl fd' ->
+                  if equal_identifier fd.fname fd'.fname then x :: remove_dup xs
+                  else x :: y :: remove_dup xs
+              | VarDecl (i, _), VarDecl (i', _) ->
+                  if equal_identifier i i' then x :: remove_dup xs
+                  else x :: y :: remove_dup xs
+              | _, _ -> x :: y :: remove_dup xs)
+        in
+        remove_dup provints_declarations
+      in
       (* add definitions to component scope *)
       let cscope = begin_block scope in
       let definitions =
         List.map (fun m -> check_member_def m cname cscope) definitions
       in
       end_block cscope |> ignore;
-      (* add component definition to scope *)
+      (* check that all provided definitions are implemented *)
+      List.iter
+        (fun x ->
+          (* iterating on all declarations that the component must provide *)
+          match x.node with
+          | FunDecl fd -> (
+              try
+                List.find
+                  (fun y ->
+                    match y.node with
+                    | FunDecl fd' ->
+                        if equal_identifier fd.fname fd'.fname then
+                          if equal_typ x.annot y.annot then true
+                          else
+                            raise_semantic_error c.annot
+                              ("Function " ^ fd.fname ^ " not defined")
+                        else false
+                    | _ -> false)
+                  definitions
+                |> ignore
+              with Not_found ->
+                raise_semantic_error c.annot
+                  ("Function " ^ fd.fname ^ " not defined"))
+          | VarDecl (i, _) -> (
+              try
+                List.find
+                  (fun y ->
+                    match y.node with
+                    | VarDecl (i', _) ->
+                        if equal_identifier i i' then
+                          if equal_typ x.annot y.annot then true
+                          else
+                            raise_semantic_error c.annot
+                              ("Variable " ^ i ^ " not defined")
+                        else false
+                    | _ -> false)
+                  definitions
+                |> ignore
+              with Not_found ->
+                raise_semantic_error c.annot ("Variable " ^ i ^ " not defined")))
+        provints_declarations;
+
+      (* add component definition to global scope *)
       (try add_entry cname (TComponent cname) scope |> ignore
        with DuplicateEntry _ ->
          raise_semantic_error c.annot "Component already defined");
@@ -693,32 +757,76 @@ let rec check_component_def c interfaces scope =
       dbg_typ (show_component_decl pp_typ t_c) c.annot;
       t_c
 
+and get_declarations l all_interfaces =
+  List.filter
+    (fun x -> match x.node with InterfaceDecl y -> List.mem y.iname l)
+    all_interfaces
+  |> List.map (fun x -> match x.node with InterfaceDecl y -> y.declarations)
+  |> List.flatten
+  |> List.sort (fun x y ->
+         match (x.node, y.node) with
+         | FunDecl fd, FunDecl fd' -> compare fd.fname fd'.fname
+         | VarDecl (i, _), VarDecl (i', _) -> compare i i'
+         | FunDecl fd, VarDecl (i, _) -> compare fd.fname i
+         | VarDecl (i, _), FunDecl fd -> compare i fd.fname)
+
 and check_same_types decs =
   match decs with
-  | [] -> true
-  | x :: xs -> (
-      match x.node with
-      | FunDecl f ->
-          List.for_all
-            (fun y ->
-              match y.node with
-              | FunDecl f' ->
-                  f.fname != f'.fname
-                  || (f.rtype == f'.rtype && f.formals == f'.formals)
-              | VarDecl _ -> true)
-            xs
-      | VarDecl _ -> true)
+  | [ _ ] | [] -> true
+  | x :: y :: xs -> (
+      match (x.node, y.node) with
+      | FunDecl fd, FunDecl fd' ->
+          if equal_identifier fd.fname fd'.fname then
+            if equal_typ x.annot y.annot then check_same_types (y :: xs)
+            else false
+          else check_same_types (y :: xs)
+      | VarDecl (i, _), VarDecl (i', _) ->
+          if equal_identifier i i' then
+            if equal_typ x.annot y.annot then check_same_types (y :: xs)
+            else false
+          else check_same_types (y :: xs)
+      | FunDecl fd, VarDecl (i, _) ->
+          if equal_identifier fd.fname i then
+            if equal_typ x.annot y.annot then check_same_types (y :: xs)
+            else false
+          else check_same_types (y :: xs)
+      | VarDecl (i, _), FunDecl fd ->
+          if equal_identifier i fd.fname then
+            if equal_typ x.annot y.annot then check_same_types (y :: xs)
+            else false
+          else check_same_types (y :: xs))
+
+and check_ambiguities l =
+  match l with
+  | [ _ ] | [] -> true
+  | x :: y :: xs -> (
+      match (x.node, y.node) with
+      | FunDecl fd, FunDecl fd' ->
+          if equal_identifier fd.fname fd'.fname then false
+          else check_same_types (y :: xs)
+      | VarDecl (i, _), VarDecl (i', _) ->
+          if equal_identifier i i' then false else check_same_types (y :: xs)
+      | FunDecl fd, VarDecl (i, _) ->
+          if equal_identifier fd.fname i then false
+          else check_same_types (y :: xs)
+      | VarDecl (i, _), FunDecl fd ->
+          if equal_identifier i fd.fname then false
+          else check_same_types (y :: xs))
 
 and check_no_reps l =
   match List.sort compare l with
   | [] | [ _ ] -> true
-  | x :: y :: xs -> if x == y then false else check_no_reps xs
+  | x :: y :: xs ->
+      if equal_identifier x y then false else check_no_reps (y :: xs)
 
 let check_top_decls ints comps conns scope =
   let interfaces = List.map (fun i -> check_interface_decl i scope) ints in
   let components =
-    List.map (fun cmp -> check_component_def cmp ints scope) comps
+    List.map (fun cmp -> check_component_def cmp interfaces scope) comps
   in
+
+  if not !app_provided then
+    raise_semantic_error dummy_code_pos "No component provides interface App";
   CompilationUnit { interfaces; components; connections = conns }
 
 let type_check (CompilationUnit decls : code_pos compilation_unit) =
