@@ -1,7 +1,7 @@
 type lexeme_pos = { line : int; start_column : int; end_column : int }
-[@@deriving show,ord,eq]
+[@@deriving show { with_path = false },ord,eq]
 type code_pos = { start_line : int; start_column: int ; end_line: int; end_column : int}
-[@@deriving show,ord,eq]
+[@@deriving show { with_path = false },ord,eq]
   
 let to_lexeme_position lexbuf =
   let startp = Lexing.lexeme_start_p lexbuf in 
