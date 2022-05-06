@@ -1,5 +1,5 @@
 exception DuplicateEntry of Ast.identifier
-exception NotFoundEntry
+exception NotFoundEntry of Ast.identifier
 
 type 'a t 
 (* val empty_table : 'a t *) 
