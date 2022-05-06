@@ -529,32 +529,23 @@ let check_member_def m cname scope =
         <@> t
       in
       dbg_typ (show_member_decl pp_typ f_typed) m.annot;
-      (* add entry to scope *)
-      (try add_entry f.fname t scope |> ignore
-       with DuplicateEntry _ ->
-         raise_semantic_error m.annot
-           ("Function " ^ show_identifier f.fname ^ " already defined"));
       f_typed
-  | VarDecl ((i, t) as v) ->
+  | VarDecl ((_, t) as v) ->
       let t_vd = VarDecl (check_vardecl v m.annot) <@> t in
-      (* add entry to scope *)
-      (try add_entry i t_vd.annot scope |> ignore
-       with DuplicateEntry _ ->
-         raise_semantic_error m.annot
-           ("Variable " ^ show_identifier i ^ " already defined"));
       t_vd
-
-let app_provided = ref false
 
 let rec check_component_def c interfaces scope =
   match c.node with
   | ComponentDecl { cname; uses; provides; definitions } ->
-      (* Adding Prelude in uses clause, if it not explicitly used *)
+      (* adding Prelude in uses clause, if it not explicitly used *)
       let uses =
         if not (List.mem "Prelude" uses) then "Prelude" :: uses else uses
       in
+
+      (* check that Prelude is not provided *)
       if List.mem "Prelude" provides then
         raise_semantic_error c.annot "Can't provide interface Prelude";
+
       (* check that interface App is provided by only one component *)
       if List.mem "App" provides then (
         if !app_provided then
@@ -562,6 +553,7 @@ let rec check_component_def c interfaces scope =
             "Interface App provided by multiple components";
 
         app_provided := true;
+        (* if the component provides App then search main function *)
         try
           List.find
             (fun x ->
@@ -577,12 +569,16 @@ let rec check_component_def c interfaces scope =
           raise_semantic_error c.annot
             ("The component " ^ show_identifier cname
            ^ " provides App but does not define main function"));
+
+      (* check that interface App is not used *)
       if List.mem "App" uses then
         raise_semantic_error c.annot "Can't use interface App";
+
       (* check that there aren't multiple occurrences of an interface in uses clause *)
       if not (check_no_reps uses) then
         raise_semantic_error c.annot
           "Multiple occurrences of the same interface in uses clause";
+
       (* check that there aren't multiple occurrences of an interface in provides clause *)
       if not (check_no_reps provides) then
         raise_semantic_error c.annot
@@ -603,6 +599,7 @@ let rec check_component_def c interfaces scope =
          raise_semantic_error c.annot
            ("The interface " ^ show_identifier i
           ^ " specified in use clause does not exist"));
+
       (* check that in provides clause we have only interfaces *)
       (try
          List.iter
@@ -610,35 +607,23 @@ let rec check_component_def c interfaces scope =
              match lookup x scope with
              | TInterface _ -> ()
              | _ ->
-                 raise_semantic_error c.annot "Not an interface in use clause")
+                 raise_semantic_error c.annot
+                   ("In provides clause " ^ show_identifier x
+                  ^ " is not an interface"))
            provides
-       with
-      | Not_found ->
-          raise_semantic_error c.annot "Not an interface in provides clause"
-      | NotFoundEntry i ->
-          raise_semantic_error c.annot
-            ("The interface " ^ show_identifier i
-           ^ " specified in provides clause does not exist"));
+       with NotFoundEntry i ->
+         raise_semantic_error c.annot
+           ("The interface " ^ show_identifier i
+          ^ " specified in provides clause does not exist"));
+
       (* get provided interfaces declarations *)
       let provints_declarations = get_declarations provides interfaces in
-      let usesints_declarations = get_declarations uses interfaces in
-      if not (check_ambiguities usesints_declarations) then
-        raise_semantic_error c.annot
-          "Conflicts in definitions of used interfaces";
-      if
-        not
-          (check_ambiguities
-             (List.append provints_declarations usesints_declarations
-             |> List.sort compare_mdecl))
-      then
-        raise_semantic_error c.annot
-          "Conflicts in definitions of used interfaces";
-      Hashtbl.add used_interfaces cname uses;
-      (* check to see if there are declarations with same name but different types *)
+      (* check to see if there are conflicting provided declarations *)
       if not (check_same_types provints_declarations) then
         raise_semantic_error c.annot
           "Conflicts in definitions of provided interfaces";
-      (* remove possible duplicates from provided interface declarations *)
+
+      (* remove duplicates *)
       let provints_declarations =
         let rec remove_dup l =
           match l with
@@ -656,12 +641,49 @@ let rec check_component_def c interfaces scope =
         in
         remove_dup provints_declarations
       in
+      let usesints_declarations = get_declarations uses interfaces in
+
+      (* check that there aren't same definitions in used interfaces *)
+      if not (check_ambiguities usesints_declarations) then
+        raise_semantic_error c.annot
+          "Conflicts in definitions of used interfaces";
+
+      (* check that there aren't conflicting declarations between used and
+         provided interfaces *)
+      if
+        not
+          (check_ambiguities
+             (List.append provints_declarations usesints_declarations
+             |> List.sort compare_mdecl))
+      then
+        raise_semantic_error c.annot
+          "Conflicts in definitions of used and provided interfaces";
+      Hashtbl.add used_interfaces cname uses;
+
       (* add definitions to component scope *)
       let cscope = begin_block scope in
+      (* check types of each member definition *)
       let definitions =
-        List.map (fun m -> check_member_def m cname cscope) definitions
+        List.map
+          (fun m ->
+            (match m.node with
+            | FunDecl f -> (
+                (* add entry to scope *)
+                try add_entry f.fname (TFun(List.map (fun (_, t) -> t) f.formals, f.rtype)) cscope |> ignore
+                with DuplicateEntry _ ->
+                  raise_semantic_error m.annot
+                    ("Function " ^ show_identifier f.fname ^ " already defined")
+                )
+            | VarDecl (i, t) -> (
+                try add_entry i t cscope |> ignore
+                with DuplicateEntry _ ->
+                  raise_semantic_error m.annot
+                    ("Variable " ^ show_identifier i ^ " already defined")));
+            check_member_def m cname cscope)
+          definitions
       in
       end_block cscope |> ignore;
+
       (* check that all provided definitions are implemented *)
       List.iter
         (fun x ->
@@ -669,18 +691,19 @@ let rec check_component_def c interfaces scope =
           match x.node with
           | FunDecl fd -> (
               try
-                List.iter
+                List.find
                   (fun y ->
                     match y.node with
                     | FunDecl fd' ->
                         if equal_identifier fd.fname fd'.fname then
-                          if equal_typ x.annot y.annot then ()
+                          if equal_typ x.annot y.annot then true
                           else
                             raise_semantic_error c.annot
                               ("Function " ^ show_identifier fd.fname
                              ^ " has not the same signature of the one defined \
-                                in the corrispective interface")
-                    | _ -> ())
+                                in the corresponding interface")
+                        else false
+                    | _ -> false)
                   definitions
                 |> ignore
               with Not_found ->
@@ -688,18 +711,19 @@ let rec check_component_def c interfaces scope =
                   ("Function " ^ show_identifier fd.fname ^ " not defined"))
           | VarDecl (i, _) -> (
               try
-                List.iter
+                List.find
                   (fun y ->
                     match y.node with
                     | VarDecl (i', _) ->
                         if equal_identifier i i' then
-                          if equal_typ x.annot y.annot then ()
+                          if equal_typ x.annot y.annot then false
                           else
                             raise_semantic_error c.annot
                               ("Variable " ^ show_identifier i
                              ^ " has not the same signature of the one defined \
                                 in the corrispective interface")
-                    | _ -> ())
+                        else false
+                    | _ -> false)
                   definitions
                 |> ignore
               with Not_found ->
@@ -707,11 +731,6 @@ let rec check_component_def c interfaces scope =
                   ("Variable " ^ show_identifier i ^ " not defined")))
         provints_declarations;
 
-      (* add component definition to global scope *)
-      (try add_entry cname (TComponent cname) scope |> ignore
-       with DuplicateEntry _ ->
-         raise_semantic_error c.annot
-           ("Component " ^ show_identifier cname ^ " already defined"));
       (* return typed ComponentDecl *)
       let t_c =
         ComponentDecl { cname; uses; provides; definitions }
@@ -719,6 +738,8 @@ let rec check_component_def c interfaces scope =
       in
       dbg_typ (show_component_decl pp_typ t_c) c.annot;
       t_c
+
+and app_provided = ref false
 
 and get_declarations l all_interfaces =
   List.filter
@@ -790,7 +811,7 @@ let check_links links scope =
                    (show_identifier c1 ^ " is not a component")
            with NotFoundEntry _ ->
              raise_semantic_error dummy_code_pos
-               (show_identifier c1 ^ " is not defined"));
+               ("Component " ^ show_identifier c1 ^ " is not defined"));
           (try
              let x = lookup c2 scope in
              match x with
@@ -800,31 +821,43 @@ let check_links links scope =
                    (show_identifier c2 ^ " is not a component")
            with NotFoundEntry _ ->
              raise_semantic_error dummy_code_pos
-               (show_identifier c2 ^ " is not defined"));
+               ("Component " ^ show_identifier c2 ^ " is not defined"));
           (try
              let x = lookup i1 scope in
              match x with
-             | TComponent _ -> ()
+             | TInterface _ -> ()
              | _ ->
                  raise_semantic_error dummy_code_pos
                    (show_identifier i1 ^ " is not an interface")
            with NotFoundEntry _ ->
              raise_semantic_error dummy_code_pos
-               (show_identifier i1 ^ " is not defined"));
+               ("Interface " ^ show_identifier i1 ^ " is not defined"));
           try
             let x = lookup i2 scope in
             match x with
-            | TComponent _ -> ()
+            | TInterface _ -> ()
             | _ ->
                 raise_semantic_error dummy_code_pos
-                  (show_identifier i2 ^ " is not a component")
+                  (show_identifier i2 ^ " is not an interface")
           with NotFoundEntry _ ->
             raise_semantic_error dummy_code_pos
-              (show_identifier i2 ^ " is not defined")))
+              ("Interface " ^ show_identifier i2 ^ " is not defined")))
     links
 
 let check_top_decls ints comps conns scope =
   let interfaces = List.map (fun i -> check_interface_decl i scope) ints in
+
+  (* adding the components into scope here just to not have problems due to list ordering *)
+  List.iter
+    (fun x ->
+      match x.node with
+      | ComponentDecl c -> (
+          try add_entry c.cname (TComponent c.cname) scope |> ignore
+          with DuplicateEntry _ ->
+            raise_semantic_error x.annot
+              ("Component " ^ show_identifier c.cname ^ " already defined")))
+    comps;
+
   let components =
     List.map (fun cmp -> check_component_def cmp interfaces scope) comps
   in
