@@ -27,9 +27,9 @@ let add_entry ide value table =
   match table with
     | Table(parent_block, hash_tbl) -> 
       (try
-        let _ = lookup ide table in raise (DuplicateEntry ide)
+        let _ = Hashtbl.find hash_tbl ide in raise (DuplicateEntry ide)
       with 
-        NotFoundEntry ide -> let _ = Hashtbl.add hash_tbl ide value in Table(parent_block, hash_tbl))
+        | Not_found -> let _ = Hashtbl.add hash_tbl ide value in Table(parent_block, hash_tbl))
     | Dummy -> failwith "No scope"
 
 let rec scan_list l table = 
