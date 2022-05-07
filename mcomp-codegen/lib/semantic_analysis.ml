@@ -276,13 +276,11 @@ and check_fun_call pos passed_args typ_args_list =
         | TRef TInt, TRef TInt
         | TRef TChar, TRef TChar
         | TRef TBool, TRef TBool
-        | (TRef (TArray (TInt, _)) | TArray (TInt, _)), TRef (TArray (TInt, _))
-        | ( (TRef (TArray (TBool, _)) | TArray (TBool, _)),
-            TRef (TArray (TBool, _)) )
-        | ( (TRef (TArray (TChar, _)) | TArray (TChar, _)),
-            TRef (TArray (TChar, _)) ) ->
+        | ( (TRef (TArray (_, _)) | TArray (_, _)),
+            (TRef (TArray (_, _)) | TArray (_, _)) ) ->
             ()
         | _ ->
+            Printf.printf "%s---%s" (show_typ x.annot) (show_typ y);
             raise_semantic_error pos
               "Arguments with different types wrt declaration of function")
       passed_args typ_args_list
@@ -669,7 +667,11 @@ let rec check_component_def c interfaces scope =
             (match m.node with
             | FunDecl f -> (
                 (* add entry to scope *)
-                try add_entry f.fname (TFun(List.map (fun (_, t) -> t) f.formals, f.rtype)) cscope |> ignore
+                try
+                  add_entry f.fname
+                    (TFun (List.map (fun (_, t) -> t) f.formals, f.rtype))
+                    cscope
+                  |> ignore
                 with DuplicateEntry _ ->
                   raise_semantic_error m.annot
                     ("Function " ^ show_identifier f.fname ^ " already defined")
