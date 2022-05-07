@@ -718,7 +718,7 @@ let rec check_component_def c interfaces scope =
                     match y.node with
                     | VarDecl (i', _) ->
                         if equal_identifier i i' then
-                          if equal_typ x.annot y.annot then false
+                          if equal_typ x.annot y.annot then true
                           else
                             raise_semantic_error c.annot
                               ("Variable " ^ show_identifier i
