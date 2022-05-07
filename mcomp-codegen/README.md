@@ -29,7 +29,7 @@ the linker must ensure that:
 - `ID1` and `ID3` are the names of two different components;
 - `ID2` is the name of an interface *used* by `ID1`;
 - `ID4` is the name of an interface *provided* by `ID3`.
-- `ID2` and `ID3` are the same interface.
+- `ID2` and `ID4` are the same interface.
 
 Moreover, once a connection is established between two components, it cannot be overwritten. For example, the snippet of code
 ```
