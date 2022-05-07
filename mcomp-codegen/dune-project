@@ -23,5 +23,6 @@
   (odoc :with-doc)
   ppx_deriving
   menhir
-  (llvm (>= 11.0.0))))
+  (llvm (>= 11.0.0))
+  easy_logging))
 
