@@ -2,22 +2,22 @@
 - [x] Interfaces and components define their own scope.
 - [x] Interfaces and components cannot be nested.
 - [x] There is a global scope that contains interface and component declarations.
-- [ ] The declarations inside the global scope are mutually recursive.
-- [ ] A component must implement all the members defined in the interfaces it provides (the types of the members must be the same).
-- [ ] The declarations inside a component are mutually recursive.
-- [ ] The interfaces used by a component must not lead to *ambiguous* names, i.e. names provided by different used interfaces.
+- [x] The declarations inside the global scope are mutually recursive.
+- [x] A component must implement all the members defined in the interfaces it provides (the types of the members must be the same).
+- [x] The declarations inside a component are mutually recursive.
+- [x] The interfaces used by a component must not lead to *ambiguous* names, i.e. names provided by different used interfaces.
 - [x] A component can only provides and uses interfaces.
 - [x] The name of an interface must occur only once in a `provides` and `uses` list.
-- [ ] A component may provide two interfaces that have members with the same name as long as these members have the same type.
-- [ ] Block can be nested and the declaration of a variable `x` in a inner block hides possible declarations in outer blocks.
-- [ ] Functions cannot be nested.
+- [x] A component may provide two interfaces that have members with the same name as long as these members have the same type.
+- [x] Block can be nested and the declaration of a variable `x` in a inner block hides possible declarations in outer blocks.
+- [x] Functions cannot be nested.
 - [x] No function overloading.
 - [x] The interface `App` can be provided by only one component and never used.
 - [x] There exists a `Prelude` component that provides two library functions to perform I/O operations: *print(v : int)* and *getint() : int*. The `Prelude` interface is implicitly used by all components, and it cannot be provided by any component. 
 
 ## Typing rules TODOs
-- [ ] Booleans and characters cannot be converted to integers.
-- [ ] References to arrays and references to scalars are different types.
+- [x] Booleans and characters cannot be converted to integers.
+- [x] References to arrays and references to scalars are different types.
 - [x] Arithmetic operators expect only integer values.
 - [x] Logical operators expect only boolean values.
 - [x] In `a[i]` we expect `a` to be an array or a reference to an array and `i` to be an integer value.
