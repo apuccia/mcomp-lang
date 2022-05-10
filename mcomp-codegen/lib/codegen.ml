@@ -21,6 +21,17 @@ let rec to_llvm_type t =
         (Array.of_list (List.map (fun t -> to_llvm_type t) l))
   | _ -> failwith (show_typ t)
 
+let get_default t =
+  match t with
+  | TInt -> Llvm.const_int (Llvm.i32_type llcontext) 0
+  | TBool -> Llvm.const_int (Llvm.i1_type llcontext) 0
+  | TChar -> Llvm.const_int (Llvm.i8_type llcontext) 0
+  | TArray (t', Some n) ->
+      let llt_s = to_llvm_type t' in
+      let values = Array.init n (fun _ -> Llvm.const_int llt_s 0) in
+      Llvm.const_array llt_s values
+  | _ -> failwith ""
+
 let add_terminator builder after =
   let terminator = Llvm.block_terminator (Llvm.insertion_block builder) in
   if Option.is_none terminator then after builder |> ignore else ()
@@ -34,14 +45,8 @@ let component_scopes = Hashtbl.create 0
 
 let rec codegen_expr cname scope builder e =
   match e.node with
-  | LV lv ->
-      let llv_v = codegen_lv cname scope builder lv in
-      Llvm.build_load llv_v "lv" builder
-  | Assign (lv, e) ->
-      let llv_lv = codegen_lv cname scope builder lv in
-      let llv_e = codegen_expr cname scope builder e in
-      Llvm.build_store llv_e llv_lv builder |> ignore;
-      llv_e
+  | LV lv -> codegen_lv cname scope builder lv
+  | Assign (lv, e) -> failwith ""
   | ILiteral i -> Llvm.const_int (Llvm.i32_type llcontext) i
   | CLiteral c -> Llvm.const_int (Llvm.i8_type llcontext) (Char.code c)
   | BLiteral b ->
@@ -94,29 +99,7 @@ let rec codegen_expr cname scope builder e =
       let el = List.map (fun x -> codegen_expr cname scope builder x) el in
       Llvm.build_call llv_f (Array.of_list el) "" builder
 
-and codegen_lv cname scope builder lv =
-  match lv.node with
-  | AccVar (None, id2) -> lookup (cname ++ id2) scope
-  | AccVar (Some id1, id2) ->
-      Hashtbl.find component_scopes id1 |> lookup (id1 ++ id2)
-  | AccIndex (lv, e) -> (
-      let llv_e = codegen_expr cname scope builder e in
-      let llv_lv = codegen_lv cname scope builder lv in
-      let llt_lv = llv_lv |> Llvm.type_of in
-      match llt_lv |> Llvm.classify_type with
-      | Llvm.TypeKind.Pointer -> (
-          match llt_lv |> Llvm.element_type |> Llvm.classify_type with
-          | Llvm.TypeKind.Array ->
-              Llvm.build_in_bounds_gep llv_lv
-                [| Llvm.const_int (Llvm.i32_type llcontext) 0; llv_e |]
-                "" builder
-          | _ ->
-              let llv_loaded = Llvm.build_load llv_lv "" builder in
-              Llvm.build_in_bounds_gep llv_loaded [| llv_e |] "" builder)
-      | _ ->
-          Llvm.build_in_bounds_gep llv_lv
-            [| Llvm.const_int (Llvm.i32_type llcontext) 0; llv_e |]
-            "" builder)
+and codegen_lv cname scope builder lv = failwith ""
 
 let rec codegen_stmt cname llv_f scope builder body =
   match body.node with
@@ -167,10 +150,16 @@ let rec codegen_stmt cname llv_f scope builder body =
 and codegen_stmtordec cname llv_f scope builder stmt =
   match stmt.node with
   | LocalDecl (i, t) ->
-      let llv_var = Llvm.build_alloca (to_llvm_type t) (cname ++ i) builder in
-      Printf.printf "%s*****\n" (cname ++ i);
+      let llv_var =
+        match t with
+        | TArray (_, Some s) ->
+            Llvm.build_array_alloca (to_llvm_type t)
+              (Llvm.const_int (Llvm.i32_type llcontext) s)
+              (cname ++ i) builder
+        | _ -> Llvm.build_alloca (to_llvm_type t) (cname ++ i) builder
+      in
       add_entry (cname ++ i) llv_var scope |> ignore;
-      Llvm.build_store (Llvm.undef (to_llvm_type t)) llv_var builder |> ignore
+      Llvm.build_store (get_default t) llv_var builder |> ignore
   | Stmt s -> codegen_stmt cname llv_f scope builder s
 
 let codegen_fundecl cname fd cscope =
@@ -192,10 +181,9 @@ let codegen_fundecl cname fd cscope =
   codegen_stmt cname llv_f fscope llb_f (Option.get fd.body) |> ignore;
   end_block fscope |> ignore;
 
-  let ret_type = to_llvm_type fd.rtype in
   match fd.rtype with
   | TVoid -> add_terminator llb_f Llvm.build_ret_void
-  | _ -> add_terminator llb_f (ret_type |> Llvm.undef |> Llvm.build_ret)
+  | _ -> add_terminator llb_f (fd.rtype |> get_default |> Llvm.build_ret)
 
 let to_llvm_module (CompilationUnit decls : typ compilation_unit) =
   let scope = empty_table () in
@@ -237,9 +225,7 @@ let to_llvm_module (CompilationUnit decls : typ compilation_unit) =
                   add_entry (cd.cname ++ fd.fname) llv_f cscope |> ignore
               | VarDecl (i, t) ->
                   let llv_v =
-                    Llvm.define_global (cd.cname ++ i)
-                      (Llvm.undef (to_llvm_type t))
-                      llmodule
+                    Llvm.define_global (cd.cname ++ i) (get_default t) llmodule
                   in
                   add_entry (cd.cname ++ i) llv_v cscope |> ignore);
               end_block cscope |> ignore)
