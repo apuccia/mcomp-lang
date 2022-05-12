@@ -51,6 +51,8 @@ let check_vardecl v pos =
   | i, TChar -> (i, TChar)
   | i, TArray (t, s) ->
       (* arrays should have a size of at least 1 element *)
+      if Option.is_none s then
+        raise_semantic_error pos "Array declaration need to have a size";
       let size = Option.get s in
       if size == 0 then
         raise_semantic_error pos "Array should have a size of at least 1"
