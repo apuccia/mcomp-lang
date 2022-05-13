@@ -23,6 +23,7 @@ let dbg_typ msg pos =
 let ( <@> ) n f = { node = n; annot = f }
 let ints_scopes = Hashtbl.create 0
 let used_interfaces = Hashtbl.create 0
+let comp_globals = Hashtbl.create 0
 
 let get_interface_qualifier cname ide =
   let rec g l =
@@ -303,14 +304,27 @@ and check_lvalue lv cname scope =
         t_av
       with NotFoundEntry _ -> (
         try
-          let q = get_interface_qualifier cname id2 in
-          match q with
-          | iname, t ->
-              let t_av = AccVar (Some iname, id2) <@> t in
+          let glob =
+            List.find
+              (fun x -> match x with i, _ -> equal_identifier i id2)
+              (Hashtbl.find comp_globals cname)
+          in
+          match glob with
+          | _, t ->
+              let t_av = AccVar (Some cname, id2) <@> t in
               dbg_typ (show_lvalue pp_typ t_av) lv.annot;
               t_av
-        with Not_found | Failure _ ->
-          raise_semantic_error lv.annot ("Variable " ^ id2 ^ " not declared")))
+        with Not_found -> (
+          try
+            let q = get_interface_qualifier cname id2 in
+            match q with
+            | iname, t ->
+                let t_av = AccVar (Some iname, id2) <@> t in
+                dbg_typ (show_lvalue pp_typ t_av) lv.annot;
+                t_av
+          with Not_found | Failure _ ->
+            raise_semantic_error lv.annot ("Variable " ^ id2 ^ " not declared")))
+      )
   | AccIndex (lv', e) -> (
       let t_e = check_exp e cname scope in
       (* in a[i] we expect i to be an integer value *)
@@ -662,31 +676,42 @@ let rec check_component_def c interfaces scope =
 
       (* add definitions to component scope *)
       let cscope = begin_block scope in
+      List.iter
+        (fun m ->
+          match m.node with
+          | FunDecl f -> (
+              (* add entry to scope *)
+              try
+                add_entry f.fname
+                  (TFun (List.map (fun (_, t) -> t) f.formals, f.rtype))
+                  cscope
+                |> ignore
+              with DuplicateEntry _ ->
+                raise_semantic_error m.annot
+                  ("Function " ^ show_identifier f.fname ^ " already defined"))
+          | VarDecl (i, t) -> (
+              try add_entry i t cscope |> ignore
+              with DuplicateEntry _ ->
+                raise_semantic_error m.annot
+                  ("Variable " ^ show_identifier i ^ " already defined")))
+        definitions;
       (* check types of each member definition *)
       let definitions =
-        List.map
-          (fun m ->
-            (match m.node with
-            | FunDecl f -> (
-                (* add entry to scope *)
-                try
-                  add_entry f.fname
-                    (TFun (List.map (fun (_, t) -> t) f.formals, f.rtype))
-                    cscope
-                  |> ignore
-                with DuplicateEntry _ ->
-                  raise_semantic_error m.annot
-                    ("Function " ^ show_identifier f.fname ^ " already defined")
-                )
-            | VarDecl (i, t) -> (
-                try add_entry i t cscope |> ignore
-                with DuplicateEntry _ ->
-                  raise_semantic_error m.annot
-                    ("Variable " ^ show_identifier i ^ " already defined")));
-            check_member_def m cname cscope)
-          definitions
+        List.map (fun m -> check_member_def m cname cscope) definitions
       in
       end_block cscope |> ignore;
+
+      (* since we will do name mangling in codegen,
+         I need to qualify the globals of the component *)
+      Hashtbl.add comp_globals cname
+        (List.map
+           (fun x ->
+             match x.node with
+             | VarDecl (i, t) -> (i, t)
+             | _ -> failwith "impossible")
+           (List.filter
+              (fun x -> match x.node with VarDecl _ -> true | _ -> false)
+              definitions));
 
       (* check that all provided definitions are implemented *)
       List.iter

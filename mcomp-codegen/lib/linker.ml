@@ -17,7 +17,6 @@ let raise_linking_error msg =
   raise (LinkingError msg)
 
 let linked_interfaces = Hashtbl.create 0
-let comp_globals = Hashtbl.create 0
 
 let check_connection connection components =
   match connection with
@@ -80,13 +79,6 @@ let check_used_interfaces component connections =
 let rec qualify_component component =
   match component.node with
   | ComponentDecl cd ->
-      let globals =
-        List.fold_left
-          (fun l v -> match v.node with VarDecl (i, _) -> i :: l | _ -> l)
-          [] cd.definitions
-      in
-      (* since we will do name mangling in codegen, I need to qualify the globals of the component *)
-      Hashtbl.add comp_globals cd.cname globals;
       let comp =
         ComponentDecl
           {
@@ -109,16 +101,14 @@ and qualify_lv lv cname =
           let h = Hashtbl.find linked_interfaces cname in
           let q = Hashtbl.find h (Option.get id1) in
           AccVar (Some q, id2) <@> lv.annot
-        else if List.mem id2 (Hashtbl.find comp_globals cname) then
-          AccVar (Some cname, id2) <@> lv.annot
         else AccVar (None, id2) <@> lv.annot
       in
 
       dbg_link (show_lvalue pp_typ av);
       av
-  | AccIndex (lv, e) ->
+  | AccIndex (lv', e) ->
       let ai =
-        AccIndex (qualify_lv lv cname, qualify_expr e cname) <@> lv.annot
+        AccIndex (qualify_lv lv' cname, qualify_expr e cname) <@> lv.annot
       in
       dbg_link (show_lvalue pp_typ ai);
       ai
