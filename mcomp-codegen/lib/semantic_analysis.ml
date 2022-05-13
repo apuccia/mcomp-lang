@@ -72,11 +72,9 @@ let rec check_fun_formals args pos =
   | [] -> ()
   | ( _,
       ( TInt | TBool | TChar
-      | TRef
-          ( TInt | TBool | TChar
-          | TArray (TInt, None)
-          | TArray (TBool, None)
-          | TArray (TChar, None) ) ) )
+      | TRef (TInt | TBool | TChar)
+      | TArray ((TInt | TBool | TChar), None)
+      | TArray (TRef _, None) ) )
     :: xs ->
       check_fun_formals xs pos
   | (_, t) :: _ ->
@@ -90,18 +88,12 @@ let check_member_decl m scope =
           f.body will be None because we are in an interface, f.rtype will be a
           basic type due to grammar
       *)
-      let formals =
-        List.map
-          (fun (i, t) ->
-            match t with
-            | TArray (t', s) -> (i, TRef (TArray (t', s)))
-            | _ -> (i, t))
-          f.formals
-      in
-      check_fun_formals formals m.annot;
+      check_fun_formals f.formals m.annot;
       let t_fd =
-        FunDecl { rtype = f.rtype; fname = f.fname; formals; body = None }
-        <@> TFun (List.map (fun m -> match m with _, t -> t) formals, f.rtype)
+        FunDecl
+          { rtype = f.rtype; fname = f.fname; formals = f.formals; body = None }
+        <@> TFun
+              (List.map (fun m -> match m with _, t -> t) f.formals, f.rtype)
       in
       (try add_entry f.fname t_fd.annot scope |> ignore
        with DuplicateEntry _ ->
@@ -235,7 +227,7 @@ let rec check_exp e cname scope =
   | Call (_, ide_f, args) -> (
       let args_list = List.map (fun x -> check_exp x cname scope) args in
       try
-        (* searching fun in local scope *)
+        (* searching fun in scope *)
         let tfun = lookup ide_f scope in
         match tfun with
         (* only functions can be invoked *)
@@ -279,11 +271,9 @@ and check_fun_call pos passed_args typ_args_list =
         | TRef TInt, TRef TInt
         | TRef TChar, TRef TChar
         | TRef TBool, TRef TBool
-        | ( (TRef (TArray (_, _)) | TArray (_, _)),
-            (TRef (TArray (_, _)) | TArray (_, _)) ) ->
+        | TArray (_, _), TArray (_, _) ->
             ()
         | _ ->
-            Printf.printf "%s---%s" (show_typ x.annot) (show_typ y);
             raise_semantic_error pos
               "Arguments with different types wrt declaration of function")
       passed_args typ_args_list
@@ -463,7 +453,7 @@ let rec check_stmt body cname fscope rtype =
       | Some v ->
           let t_e = check_exp v cname fscope in
           let r = Option.value rtype ~default:TVoid in
-          if equal_typ t_e.annot r then (
+          if equal_typ t_e.annot r || equal_typ t_e.annot (TRef r) then (
             let t_r = Return (Some t_e) <@> t_e.annot in
             dbg_typ (show_stmt pp_typ t_r) body.annot;
             t_r)
@@ -512,25 +502,17 @@ let check_member_def m cname scope =
              ^ " already defined in interface " ^ i)
           with NotFoundEntry _ -> ())
         (Hashtbl.find used_interfaces cname);
-      let formals =
-        List.map
-          (fun (i, t) ->
-            match t with
-            | TArray (t', s) -> (i, TRef (TArray (t', s)))
-            | _ -> (i, t))
-          f.formals
-      in
       let fscope = begin_block scope in
-      (try of_alist formals fscope |> ignore
+      (try of_alist f.formals fscope |> ignore
        with DuplicateEntry i ->
          raise_semantic_error m.annot
            ("Duplicate formal argument " ^ show_identifier i));
-      check_fun_formals formals m.annot;
+      check_fun_formals f.formals m.annot;
       (* f.body will be Some because we are considering the implementation *)
       let fbody = check_stmt (Option.get f.body) cname fscope (Some f.rtype) in
       end_block fscope |> ignore;
       let t =
-        TFun (List.map (fun m -> match m with _, t -> t) formals, f.rtype)
+        TFun (List.map (fun m -> match m with _, t -> t) f.formals, f.rtype)
       in
       let f_typed =
         FunDecl
@@ -905,7 +887,11 @@ let type_check (CompilationUnit decls : code_pos compilation_unit) =
 
   logger#info "Added Prelude and App interface into global scope";
 
-  let p = begin_block global_scope |> of_alist prelude_signature in
+  let p = begin_block global_scope in
+  List.iter
+    (fun (i, t) ->
+      add_entry (String.sub i 10 (String.length i - 10)) t p |> ignore)
+    prelude_signature;
   end_block p |> ignore;
   Hashtbl.add ints_scopes "Prelude" p;
   logger#info "Added Prelude definitions into Prelude scope";
