@@ -15,7 +15,6 @@ type binop =
 [@@deriving show { with_path = false }, ord, eq]
 
 type uop = Neg | Not [@@deriving show { with_path = false }, ord, eq]
-
 type identifier = string [@@deriving show { with_path = false }, ord, eq]
 
 type typ =
@@ -26,7 +25,7 @@ type typ =
   | TRef of typ (* Reference type *)
   | TVoid (* Type unit *)
   | TFun of typ list * typ (* Type functions [paramerts] -> return_type *)
-  | TInterface of identifier  (* Type of an interface *)
+  | TInterface of identifier (* Type of an interface *)
   | TComponent of identifier (* Type of a component *)
 [@@deriving show { with_path = false }, ord, eq]
 
@@ -93,13 +92,13 @@ and 'a member_decl_node =
   | VarDecl of vdecl
 [@@deriving show { with_path = false }, ord, eq]
 
-and 'a interface_decl = ('a interface_decl_node, 'a) annotated_node 
+and 'a interface_decl = ('a interface_decl_node, 'a) annotated_node
 
 and 'a interface_decl_node =
   | InterfaceDecl of {
       (* Interface declaration *)
       iname : identifier;
-      declarations : 'a member_decl list;    
+      declarations : 'a member_decl list;
     }
 [@@deriving show { with_path = false }, ord, eq]
 

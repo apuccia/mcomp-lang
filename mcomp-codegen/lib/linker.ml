@@ -238,7 +238,9 @@ and qualify_definition definition cname =
   match definition.node with
   | FunDecl fd ->
       let fscope = empty_table () |> begin_block in
-      List.iter (fun x -> match x with (i, t) -> add_entry i t fscope |> ignore) fd.formals;
+      List.iter
+        (fun x -> match x with i, t -> add_entry i t fscope |> ignore)
+        fd.formals;
       let fd' =
         FunDecl
           {
