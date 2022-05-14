@@ -4,4 +4,4 @@ component EntryPoint provides App {
     }
 }
 
-connect EntryPoint.App <- App.App
+connect EntryPoint.App <- App.App;

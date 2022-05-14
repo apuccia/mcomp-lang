@@ -17,4 +17,4 @@ component Entry provides App uses Adder {
   }
 }  
 
-connect Entry.Adder <- CAdder.Adder
+connect Entry.Adder <- CAdder.Adder;

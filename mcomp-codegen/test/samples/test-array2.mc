@@ -30,4 +30,4 @@ component Application provides App uses Setter {
   }  
 }
 
-connect Application.Setter <- CSetter.Setter
+connect Application.Setter <- CSetter.Setter;

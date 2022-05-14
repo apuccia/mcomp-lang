@@ -39,4 +39,4 @@ component Application provides App uses Printer {
   } 
 }
 
-connect Application.Printer <- LeaderPrinter.Printer // The End
+connect Application.Printer <- LeaderPrinter.Printer; // The End

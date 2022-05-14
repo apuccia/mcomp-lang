@@ -4,4 +4,4 @@ component EntryPoint provides App {
     }
 }
 // Link to Prelude cannot be specified
-connect EntryPoint.Prelude <- Prelude.Prelude
+connect EntryPoint.Prelude <- Prelude.Prelude;

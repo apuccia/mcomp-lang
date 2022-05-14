@@ -17,5 +17,5 @@ component Program provides App uses Printer {
 }
 
 // No component provides or uses interface Foo
-connect Program.Printer <- CPrinter.Printer
-connect Program.Foo <- CPrinter.Foo
+connect Program.Printer <- CPrinter.Printer;
+connect Program.Foo <- CPrinter.Foo;

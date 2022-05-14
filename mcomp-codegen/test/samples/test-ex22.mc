@@ -29,4 +29,4 @@ component EntryPoint provides App uses Date {
   }
 }
 
-connect EntryPoint.Date <- CDate.Date
+connect EntryPoint.Date <- CDate.Date;

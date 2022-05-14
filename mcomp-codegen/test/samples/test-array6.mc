@@ -52,4 +52,4 @@ component EntryPoint provides App uses Searcher {
   } 
 }
 
-connect EntryPoint.Searcher <- BinarySearcher.Searcher
+connect EntryPoint.Searcher <- BinarySearcher.Searcher;

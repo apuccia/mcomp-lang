@@ -15,5 +15,5 @@ component EntryPoint provides App uses Adder {
   }
 }
 
-connect EntryPoint.Adder <- CAdder.Adder
+connect EntryPoint.Adder <- CAdder.Adder;
 

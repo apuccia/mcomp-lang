@@ -34,4 +34,4 @@ component CPrinter provides Printer {
   }
 }
 
-connect EntryPoint.Printer <- CPrinter.Printer
+connect EntryPoint.Printer <- CPrinter.Printer;

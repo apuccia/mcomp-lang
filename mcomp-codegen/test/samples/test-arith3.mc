@@ -21,5 +21,5 @@ component EntryPoint
   }
 }   
 
-connect EntryPoint.Foo <- CFoo.Foo
+connect EntryPoint.Foo <- CFoo.Foo;
 

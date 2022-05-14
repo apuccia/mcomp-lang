@@ -9,4 +9,4 @@ component Program provides App uses Foo{
 }
 
 // The component CFoo is not declared
-connect Program.Foo <- CFoo.Foo
+connect Program.Foo <- CFoo.Foo;

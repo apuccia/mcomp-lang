@@ -29,5 +29,5 @@ component A provides App uses Printer {
 /* A component can be linked only once */
 connect {
     A.Printer <- CPrinter.Printer;
-    FooBar.Printer <- CPrinter.Printer;
+    A.Printer <- CPrinter.Printer;
 }
