@@ -52,6 +52,7 @@
     | CONNECT -> "CONNECT"
     | DEF -> "DEF"
     | FOR -> "FOR"
+    | DO -> "DO"
     | T_BOOL(true) -> "T_BOOL(true)"
     | T_BOOL(false) -> "T_BOOL(false)"
     | _ -> ""

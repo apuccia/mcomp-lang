@@ -95,7 +95,7 @@ let rec codegen_stmt stmt cname scope llv_f llbuilder =
 
       (* jump to cond block *)
       Llvm.build_br llblock_cond llbuilder |> ignore;
-      (* in cond block add e instruction*)
+      (* in cond block add e instructions *)
       Llvm.position_at_end llblock_cond llbuilder;
       let llv_e = codegen_expr e cname scope llv_f llbuilder in
 
@@ -109,6 +109,28 @@ let rec codegen_stmt stmt cname scope llv_f llbuilder =
       (* if there is a return statement in body stop otherwise jump to
          to cond testing *)
       if ret then () else Llvm.build_br llblock_cond llbuilder |> ignore;
+
+      (* continue generating at cont block *)
+      Llvm.position_at_end llblock_cont llbuilder;
+      ret
+  | DoWhile (s, e) ->
+      let llblock_cond = Llvm.append_block ll_context "test_cond" llv_f in
+      let llblock_dow = Llvm.append_block ll_context "dowhile_body" llv_f in
+      let llblock_cont = Llvm.append_block ll_context "cont" llv_f in
+
+      (* jump to dowhile block *)
+      Llvm.build_br llblock_dow llbuilder |> ignore;
+
+      (* if there is a return statement in body stop otherwise jump to
+         to cond testing *)
+      let ret = codegen_stmt s cname scope llv_f llbuilder in
+      if ret then () else Llvm.build_br llblock_cond llbuilder |> ignore;
+
+      (* in cond block generate e instructions *)
+      Llvm.position_at_end llblock_cond llbuilder;
+      let llv_e = codegen_expr e cname scope llv_f llbuilder in
+      (* continue loop or go to cont block according to value of e *)
+      Llvm.build_cond_br llv_e llblock_dow llblock_cont llbuilder |> ignore;
 
       (* continue generating at cont block *)
       Llvm.position_at_end llblock_cont llbuilder;

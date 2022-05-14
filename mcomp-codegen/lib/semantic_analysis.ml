@@ -436,6 +436,18 @@ let rec check_stmt body cname fscope rtype =
           raise_semantic_error e.annot
             ("This expression has type " ^ show_typ t_e.annot
            ^ " but was expected with type " ^ show_typ TBool))
+  | DoWhile (s, e) -> (
+      let t_e = check_exp e cname fscope in
+      let t_s = check_stmt s cname fscope rtype in
+      match t_e.annot with
+      | TBool ->
+          let t_dowhile = DoWhile (t_s, t_e) <@> TVoid in
+          dbg_typ (show_stmt pp_typ t_dowhile) body.annot;
+          t_dowhile
+      | _ ->
+          raise_semantic_error e.annot
+            ("This expression has type " ^ show_typ t_e.annot
+           ^ " but was expected with type " ^ show_typ TBool))
   | Expr e ->
       let t_e = Expr (check_exp e cname fscope) <@> TVoid in
       dbg_typ (show_stmt pp_typ t_e) body.annot;

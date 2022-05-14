@@ -198,6 +198,14 @@ and qualify_stmt body cname scope =
 
       dbg_link (show_stmt pp_typ w);
       w
+  | DoWhile (s, e) ->
+      let dw =
+        DoWhile (qualify_stmt s cname scope, qualify_expr e cname scope)
+        <@> body.annot
+      in
+
+      dbg_link (show_stmt pp_typ dw);
+      dw
   | Expr e ->
       let e' = Expr (qualify_expr e cname scope) <@> body.annot in
 

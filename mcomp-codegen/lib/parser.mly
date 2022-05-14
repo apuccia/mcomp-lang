@@ -67,6 +67,7 @@
 %token CONNECT "connect"
 %token DEF "def"
 %token FOR "for"
+%token DO "do"
 
 %token <int32> T_INT // integers are 32bit values
 %token <char> T_CHAR
@@ -622,6 +623,15 @@ stmt:
       let b = Block[stmt_i; stmt_w] in 
         dbg_pos (show_stmt_node pp_code_pos b) pos;
         b <@> pos
+  }
+| "do" body = stmt "while" "(" cond = expr ")" ";"
+  {
+    logger#info "Reducing: do stmt while (expr) -> stmt";
+
+    let pos = to_code_position($startpos, $endpos) in 
+      let dow = DoWhile(body, cond) in
+        dbg_pos (show_stmt_node pp_code_pos dow) pos;
+        dow <@> pos
   }
 ;
 
