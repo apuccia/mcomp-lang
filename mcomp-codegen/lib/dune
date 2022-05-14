@@ -2,11 +2,12 @@
  (name mcomp_lang)
  (public_name mcomp-lang)
  (libraries llvm llvm.analysis llvm.scalar_opts easy_logging)
- (preprocess (pps ppx_deriving.show ppx_deriving.ord ppx_deriving.eq)))
+ (preprocess
+  (pps ppx_deriving.show ppx_deriving.ord ppx_deriving.eq)))
 
 (ocamllex
-  (modules scanner))
+ (modules scanner))
 
-(menhir 
-  (modules parser)
-  (flags --explain --dump --strict))
+(menhir
+ (modules parser)
+ (flags --explain --dump --strict))
