@@ -5,7 +5,8 @@ let optimize_module llvm_module =
   Llvm_scalar_opts.add_memory_to_register_promotion pass_manager;
 
   (* constant propagation *)
-  Llvm_scalar_opts.add_constant_propagation pass_manager;
+  (* Llvm_scalar_opts.add_constant_propagation pass_manager; unbound?*)
+  Llvm_scalar_opts.add_correlated_value_propagation pass_manager;
 
   (* loop unrolling *)
   Llvm_scalar_opts.add_loop_unroll pass_manager;
@@ -20,5 +21,5 @@ let optimize_module llvm_module =
   Llvm_scalar_opts.add_tail_call_elimination pass_manager;
 
   Llvm.PassManager.run_module llvm_module pass_manager |> ignore;
-  
+
   llvm_module
