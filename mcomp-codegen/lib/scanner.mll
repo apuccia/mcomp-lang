@@ -68,10 +68,12 @@
 
 (* Declaration of regular expressions *)
 
-let exa = "0x"
 let digit = ['0' - '9']
 let upper = ['A' - 'Z']
 let lower = ['a' - 'z']
+let hexadigit = ['0' - '9' 'a' - 'f' 'A' - 'F']
+let exaint = "0x"hexadigit+
+let exafloat = "0x"hexadigit+.hexadigit+
 (* \f not supported by OCaml, I use its byte representation *)
 let special = ['\'' '\b' '\t' '\x0c' '\\' '\r' '\n']
 let characters = [^ '\'' '\b' '\x0c' '\t' '\\' '\r' '\n']
@@ -83,12 +85,12 @@ let id = (upper | lower)['a' - 'z' 'A' - 'Z' '0' - '9' '_']*
 (* Declaration of scanner functions *)
 
 rule next_token = parse
-| exa? digit+ as inum    
+| exaint | digit+ as inum    
   {
     try 
       let integer = Int32.of_string inum
       in
-        logger#info "Recognized integer literal T_INT(%ld)" integer;
+        logger#info "Recognized integer literal T_INT";
         T_INT(integer)
     with
     | Failure(_) -> 
@@ -98,6 +100,24 @@ rule next_token = parse
       let ec = end_pos.pos_cnum - end_pos.pos_bol in
       raise (Lexing_error (generate_pos init_pos.pos_lnum sc ec,
         "Value " ^ inum ^ " overflows/underflows 32 bits"))
+  }
+| exafloat | digit+'.'digit+ as fnum
+  {
+    {
+    try 
+      let fnumber = Float.of_string fnum
+      in
+        logger#info "Recognized float literal T_FLOAT";
+        T_FLOAT(integer)
+    with
+    | Failure(_) -> 
+      let init_pos = Lexing.lexeme_start_p lexbuf in
+      let end_pos = Lexing.lexeme_end_p lexbuf in
+      let sc = init_pos.pos_cnum - init_pos.pos_bol in
+      let ec = end_pos.pos_cnum - end_pos.pos_bol in
+      raise (Lexing_error (generate_pos init_pos.pos_lnum sc ec,
+        "Value " ^ fnum ^ " is not a valid float"))
+  }
   }
 | '\''          
   { character lexbuf }
