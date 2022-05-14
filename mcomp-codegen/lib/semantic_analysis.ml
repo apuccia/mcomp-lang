@@ -53,9 +53,10 @@ let compare_mdecl x y =
 let check_vardecl v pos =
   match v with
   | i, TInt -> (i, TInt)
+  | i, TFloat -> (i, TFloat)
   | i, TBool -> (i, TBool)
   | i, TChar -> (i, TChar)
-  | i, TArray (t, s) ->
+  | i, TArray (((TInt | TFloat | TBool | TChar | TRef _) as t), s) ->
       (* arrays should have a size of at least 1 element *)
       if Option.is_none s then
         raise_semantic_error pos "Array declaration need to have a size";
@@ -64,8 +65,8 @@ let check_vardecl v pos =
         raise_semantic_error pos "Array should have a size of at least 1"
       else if size < 0 then raise_semantic_error pos "Negative size for array"
       else (i, TArray (t, s))
-  | i, TRef ((TInt | TBool | TChar) as t) -> (i, TRef t)
-  | _, TRef _ ->
+  | i, TRef ((TInt | TBool | TChar | TFloat) as t) -> (i, TRef t)
+  | _, TRef (TArray _) ->
       raise_semantic_error pos "Can't declare a reference to an array"
   | _, TVoid ->
       raise_semantic_error pos
@@ -77,9 +78,9 @@ let rec check_fun_formals args pos =
   | [] -> ()
   | ( _,
       ( TInt | TBool | TChar
-      | TRef (TInt | TBool | TChar)
-      | TArray ((TInt | TBool | TChar), None)
-      | TArray (TRef (TInt | TBool | TChar), None) ) )
+      | TRef (TInt | TFloat | TBool | TChar)
+      | TArray ((TInt | TFloat | TBool | TChar), None)
+      | TArray (TRef (TInt | TFloat | TBool | TChar), None) ) )
     :: xs ->
       check_fun_formals xs pos
   | (_, t) :: _ ->
@@ -160,6 +161,7 @@ let rec check_exp e cname scope =
           its type is T
         *)
         | TInt, (TInt | TRef TInt)
+        | TFloat, (TFloat | TRef TFloat)
         | TChar, (TChar | TRef TChar)
         | TBool, (TBool | TRef TBool) ->
             Assign (t_lv, t_e) <@> t_lv.annot
@@ -167,21 +169,26 @@ let rec check_exp e cname scope =
           when a reference x of type T& is on the left hand-side of
           an assignment: if e has type T, the assignment is well typed
         *)
-        | TRef TInt, TInt | TRef TChar, TChar | TRef TBool, TBool ->
+        | TRef TInt, TInt
+        | TRef TFloat, TFloat
+        | TRef TChar, TChar
+        | TRef TBool, TBool ->
             Assign (t_lv, t_e) <@> t_lv.annot
         (*
           when a reference x of type T& is on the left hand-side of
           an assignment: if e has type T&, the assignment is well typed
         *)
-        | TRef TInt, TRef TInt | TRef TChar, TRef TChar | TRef TBool, TRef TBool
-          ->
+        | TRef TInt, TRef TInt
+        | TRef TFloat, TRef TFloat
+        | TRef TChar, TRef TChar
+        | TRef TBool, TRef TBool ->
             Assign (t_lv, t_e) <@> t_lv.annot
-        | (TInt | TChar | TBool), _ ->
+        | (TInt | TFloat | TChar | TBool), _ ->
             raise_semantic_error e'.annot
               ("This expression has type " ^ show_typ t_e.annot
              ^ " but was expected of type " ^ show_typ t_lv.annot ^ " or "
              ^ show_typ (TRef t_lv.annot))
-        | TRef ((TInt | TChar | TBool) as t), _ ->
+        | TRef ((TInt | TFloat | TChar | TBool) as t), _ ->
             raise_semantic_error e'.annot
               ("This expression has type " ^ show_typ t_e.annot
              ^ " but was expected of type " ^ show_typ t ^ " or "
@@ -199,6 +206,10 @@ let rec check_exp e cname scope =
       let t_il = ILiteral i <@> TInt in
       dbg_typ (show_expr pp_typ t_il) e.annot;
       t_il
+  | FLiteral f ->
+      let t_fl = FLiteral f <@> TFloat in
+      dbg_typ (show_expr pp_typ t_fl) e.annot;
+      t_fl
   | CLiteral c ->
       let t_cl = CLiteral c <@> TChar in
       dbg_typ (show_expr pp_typ t_cl) e.annot;
@@ -210,7 +221,7 @@ let rec check_exp e cname scope =
   | UnaryOp (op, e) -> (
       let t_e = check_exp e cname scope in
       match (op, t_e.annot) with
-      | Not, (TBool as t) | Neg, (TInt as t) ->
+      | Not, ((TBool as t) | TRef (TBool as t)) ->
           let t_uo = UnaryOp (op, t_e) <@> t in
           dbg_typ (show_expr pp_typ t_uo) e.annot;
           t_uo
@@ -218,10 +229,18 @@ let rec check_exp e cname scope =
           raise_semantic_error e.annot
             ("This expression has type " ^ show_typ t_e.annot
            ^ " but was expected of type " ^ show_typ TBool)
+      | ( Neg,
+          ((TInt as t) | (TFloat as t) | TRef (TInt as t) | TRef (TFloat as t))
+        ) ->
+          let t_uo = UnaryOp (op, t_e) <@> t in
+          dbg_typ (show_expr pp_typ t_uo) e.annot;
+          t_uo
       | Neg, _ ->
           raise_semantic_error e.annot
             ("This expression has type " ^ show_typ t_e.annot
-           ^ " but was expected of type " ^ show_typ TInt))
+           ^ " but was expected of type " ^ show_typ TInt ^ " (or "
+           ^ show_typ (TRef TInt) ^ ") or type " ^ show_typ TFloat ^ " (or "
+           ^ show_typ (TRef TFloat) ^ ")"))
   | Address lv ->
       let t_lv = check_lvalue lv cname scope in
       let t_a = Address t_lv <@> TRef t_lv.annot in
@@ -273,12 +292,15 @@ and check_fun_call pos passed_args typ_args_list =
       (fun x y ->
         match (x.annot, y) with
         | TInt, TInt
+        | TFloat, TFloat
         | TBool, TBool
         | TChar, TChar
         | TRef TInt, TInt
+        | TRef TFloat, TFloat
         | TRef TBool, TBool
         | TRef TChar, TChar
         | TRef TInt, TRef TInt
+        | TRef TFloat, TRef TFloat
         | TRef TChar, TRef TChar
         | TRef TBool, TRef TBool
         | TArray (_, _), TArray (_, _) ->
@@ -322,14 +344,14 @@ and check_lvalue lv cname scope =
          ^ " but was expected of type " ^ show_typ TInt);
       let t_lv = check_lvalue lv' cname scope in
       match (t_lv.node, t_lv.annot) with
-      (* in a[i] we expect a to be to be an array or a reference to an array *)
-      | AccVar _, (TArray (t, _) | TRef (TArray (t, _))) ->
+      (* in a[i] we expect a to be to be an array *)
+      | AccVar _, TArray (t, _) ->
           let t_ai = AccIndex (t_lv, t_e) <@> t in
           dbg_typ (show_lvalue pp_typ t_ai) lv.annot;
           t_ai
       | AccVar (_, id), _ ->
           raise_semantic_error lv'.annot
-            (show_identifier id ^ " is not an array or reference to array")
+            (show_identifier id ^ " is not an array")
       (* impossible case, grammar does not allow it *)
       | AccIndex _, _ ->
           raise_semantic_error lv.annot "Cannot define multidimensional arrays")
@@ -342,14 +364,26 @@ and check_binary_op op e1 e2 bo_pos cname scope =
   | _, _, (Add | Sub | Mult | Div | Mod), (TRef TInt | TInt), (TRef TInt | TInt)
     ->
       BinaryOp (op, t_e1, t_e2) <@> TInt
+  | ( _,
+      _,
+      (Add | Sub | Mult | Div | Mod),
+      (TRef TFloat | TFloat),
+      (TRef TFloat | TFloat) ) ->
+      BinaryOp (op, t_e1, t_e2) <@> TInt
   | _, _, Equal, (TRef TInt | TInt), (TRef TInt | TInt)
+  | _, _, Equal, (TRef TFloat | TFloat), (TRef TInt | TFloat)
   | _, _, Equal, (TRef TBool | TBool), (TRef TBool | TBool) ->
       BinaryOp (op, t_e1, t_e2) <@> TBool
   | _, _, Neq, (TRef TInt | TInt), (TRef TInt | TInt)
+  | _, _, Neq, (TRef TFloat | TFloat), (TRef TInt | TFloat)
   | _, _, Neq, (TRef TBool | TBool), (TRef TBool | TBool) ->
       BinaryOp (op, t_e1, t_e2) <@> TBool
   | _, _, (Less | Leq | Greater | Geq), (TRef TInt | TInt), (TRef TInt | TInt)
-    ->
+  | ( _,
+      _,
+      (Less | Leq | Greater | Geq),
+      (TRef TFloat | TFloat),
+      (TRef TFloat | TFloat) ) ->
       BinaryOp (op, t_e1, t_e2) <@> TBool
   | _, _, (And | Or), (TRef TBool | TBool), (TRef TBool | TBool) ->
       BinaryOp (op, t_e1, t_e2) <@> TBool
@@ -368,12 +402,32 @@ and check_binary_op op e1 e2 bo_pos cname scope =
         (show_binop op ^ " This expression has type " ^ show_typ t
        ^ " but was expected of type " ^ show_typ TInt ^ " or "
        ^ show_typ (TRef TInt))
+  | ( _,
+      pos,
+      (Add | Sub | Mult | Div | Mod | Greater | Geq | Less | Leq),
+      (TRef TFloat | TFloat),
+      (_ as t) )
+  | ( pos,
+      _,
+      (Add | Sub | Mult | Div | Mod | Greater | Geq | Less | Leq),
+      (_ as t),
+      (TRef TFloat | TFloat) ) ->
+      raise_semantic_error pos
+        (show_binop op ^ " This expression has type " ^ show_typ t
+       ^ " but was expected of type " ^ show_typ TFloat ^ " or "
+       ^ show_typ (TRef TFloat))
   | pos, _, (Equal | Neq), (_ as t), (TRef TInt | TInt)
   | _, pos, (Equal | Neq), (TRef TInt | TInt), (_ as t) ->
       raise_semantic_error pos
         (show_binop op ^ " This expression has type " ^ show_typ t
        ^ " but was expected of type " ^ show_typ TInt ^ " or "
        ^ show_typ (TRef TInt))
+  | pos, _, (Equal | Neq), (_ as t), (TRef TFloat | TFloat)
+  | _, pos, (Equal | Neq), (TRef TFloat | TFloat), (_ as t) ->
+      raise_semantic_error pos
+        (show_binop op ^ " This expression has type " ^ show_typ t
+       ^ " but was expected of type " ^ show_typ TFloat ^ " or "
+       ^ show_typ (TRef TFloat))
   | pos, _, (Equal | Neq), (_ as t), (TRef TBool | TBool)
   | _, pos, (Equal | Neq), (TRef TBool | TBool), (_ as t) ->
       raise_semantic_error pos
@@ -391,15 +445,17 @@ and check_binary_op op e1 e2 bo_pos cname scope =
       raise_semantic_error bo_pos
         (show_binop op ^ " Left expression has type " ^ show_typ t_e1.annot
        ^ " right expression has type " ^ show_typ t_e2.annot
-       ^ " but both were expected of type " ^ show_typ TInt ^ " or "
-       ^ show_typ (TRef TInt))
+       ^ " but both were expected of type " ^ show_typ TInt ^ " (or type "
+       ^ show_typ (TRef TInt) ^ ") or " ^ show_typ TFloat ^ "(or type "
+       ^ show_typ (TRef TFloat) ^ ")")
   | _, _, (Equal | Neq), _, _ ->
       raise_semantic_error bo_pos
         (show_binop op ^ " Left expression has type " ^ show_typ t_e1.annot
        ^ " right expression has type " ^ show_typ t_e2.annot
        ^ " but were expected of type " ^ show_typ TInt ^ "(or type "
        ^ show_typ (TRef TInt) ^ ") or " ^ show_typ TBool ^ "(or type "
-       ^ show_typ (TRef TInt) ^ ")")
+       ^ show_typ (TRef TInt) ^ ") or " ^ show_typ TFloat ^ "(or type "
+       ^ show_typ (TRef TFloat) ^ ")")
   | _, _, (And | Or), _, _ ->
       raise_semantic_error bo_pos
         (show_binop op ^ " Left expression has type " ^ show_typ t_e1.annot

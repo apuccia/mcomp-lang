@@ -507,6 +507,14 @@ basic_type:
         dbg_pos (show_typ i) pos;
         i
   }
+| "float"
+  { 
+    logger#info "Reducing: float -> basic_type";
+    let pos = to_code_position($startpos, $endpos) in
+      let i = TFloat in
+        dbg_pos (show_typ i) pos;
+        i
+  }
 | "char"
   { 
     logger#info "Reducing: char -> basic_type";
