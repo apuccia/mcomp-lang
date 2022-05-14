@@ -70,6 +70,7 @@
 %token DO "do"
 
 %token <int32> T_INT // integers are 32bit values
+%token <float> T_FLOAT
 %token <char> T_CHAR
 %token <bool> T_BOOL
 
@@ -642,6 +643,15 @@ expr:
 
     let pos = to_code_position($startpos, $endpos) in 
       let il = ILiteral(Int32.to_int i) in
+        dbg_pos (show_expr_node pp_code_pos il) pos;
+        il <@> pos 
+  }
+| i = T_FLOAT
+  { 
+    logger#info "Reducing: T_FLOAT -> expr";
+
+    let pos = to_code_position($startpos, $endpos) in 
+      let fl = FLiteral(Int32.to_int i) in
         dbg_pos (show_expr_node pp_code_pos il) pos;
         il <@> pos 
   }

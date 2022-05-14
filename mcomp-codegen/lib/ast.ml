@@ -19,6 +19,7 @@ type identifier = string [@@deriving show { with_path = false }, ord, eq]
 
 type typ =
   | TInt (* Type int *)
+  | TFloat (* extension type float *)
   | TBool (* Type bool *)
   | TChar (* Type char *)
   | TArray of typ * int option (* Array type *)
@@ -40,6 +41,7 @@ and 'a expr_node =
   | LV of 'a lvalue (* x or a[e] *)
   | Assign of 'a lvalue * 'a expr (* x=e or a[e]=e *)
   | ILiteral of int (* Integer literal *)
+  | FLiteral of float (* extension float types *)
   | CLiteral of char (* Char literal *)
   | BLiteral of bool (* Bool literal *)
   | UnaryOp of uop * 'a expr (* Unary primitive operator *)
