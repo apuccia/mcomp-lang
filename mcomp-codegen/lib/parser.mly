@@ -57,6 +57,7 @@
 %token ELSE "else"
 %token WHILE "while"
 %token INT "int"
+%token FLOAT "float"
 %token CHAR "char"
 %token VOID "void"
 %token BOOL "bool"
@@ -654,12 +655,12 @@ expr:
         dbg_pos (show_expr_node pp_code_pos il) pos;
         il <@> pos 
   }
-| i = T_FLOAT
+| f = T_FLOAT
   { 
     logger#info "Reducing: T_FLOAT -> expr";
 
     let pos = to_code_position($startpos, $endpos) in 
-      let fl = FLiteral(Int32.to_int i) in
+      let fl = FLiteral(f) in
         dbg_pos (show_expr_node pp_code_pos il) pos;
         il <@> pos 
   }
