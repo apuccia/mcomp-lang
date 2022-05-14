@@ -25,43 +25,43 @@ component MergeSort provides Sorter uses Comparator {
       n2 = r - m; 
     
       /* create temp arrays */
-      var L : int[6];
-      var R : int[6]; 
+      var la : int[6]; // it was L but since its a variable it has to be lowercase
+      var ra : int[6]; // as before
     
-      /* Copy data to temp arrays L[] and R[] */
+      /* Copy data to temp arrays la[] and ra[] */
       for (i = 0; i < n1; i = i + 1) 
-          L[i] = arr[l + i]; 
+          la[i] = arr[l + i]; 
       for (j = 0; j < n2; j = j + 1) 
-          R[j] = arr[m + 1 + j]; 
+          ra[j] = arr[m + 1 + j]; 
     
       /* Merge the temp arrays back into arr[l..r]*/
       i = 0; // Initial index of first subarray 
       j = 0; // Initial index of second subarray 
       k = l; // Initial index of merged subarray 
       while (i < n1 && j < n2) { 
-          if (compare(L[i],R[j]) <= 0) { 
-              arr[k] = L[i]; 
+          if (compare(la[i],ra[j]) <= 0) { 
+              arr[k] = la[i]; 
               i = i + 1; 
           } 
           else { 
-              arr[k] = R[j]; 
+              arr[k] = ra[j]; 
               j = j + 1; 
           } 
           k = k + 1; 
       } 
     
-      /* Copy the remaining elements of L[], if there 
+      /* Copy the remaining elements of la[], if there 
          are any */
       while (i < n1) { 
-          arr[k] = L[i]; 
+          arr[k] = la[i]; 
           i = i + 1; 
           k = k + 1; 
       } 
     
-      /* Copy the remaining elements of R[], if there 
+      /* Copy the remaining elements of ra[], if there 
          are any */
       while (j < n2) { 
-          arr[k] = R[j]; 
+          arr[k] = ra[j]; 
           j = j + 1; 
           k = k + 1; 
       } 
