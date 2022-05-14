@@ -96,7 +96,7 @@ rule next_token = parse
       let sc = init_pos.pos_cnum - init_pos.pos_bol in
       let ec = end_pos.pos_cnum - end_pos.pos_bol in
       raise (Lexing_error (generate_pos init_pos.pos_lnum sc ec,
-        "Value " ^ inum ^ " overflow"))
+        "Value " ^ inum ^ " overflows/underflows 32 bits"))
   }
 | '\''          
   { character lexbuf }
