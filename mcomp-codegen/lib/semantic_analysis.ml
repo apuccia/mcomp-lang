@@ -77,7 +77,7 @@ let rec check_fun_formals args pos =
   match args with
   | [] -> ()
   | ( _,
-      ( TInt | TBool | TChar
+      ( TInt | TFloat | TBool | TChar
       | TRef (TInt | TFloat | TBool | TChar)
       | TArray ((TInt | TFloat | TBool | TChar), None)
       | TArray (TRef (TInt | TFloat | TBool | TChar), None) ) )
@@ -369,7 +369,7 @@ and check_binary_op op e1 e2 bo_pos cname scope =
       (Add | Sub | Mult | Div | Mod),
       (TRef TFloat | TFloat),
       (TRef TFloat | TFloat) ) ->
-      BinaryOp (op, t_e1, t_e2) <@> TInt
+      BinaryOp (op, t_e1, t_e2) <@> TFloat
   | _, _, Equal, (TRef TInt | TInt), (TRef TInt | TInt)
   | _, _, Equal, (TRef TFloat | TFloat), (TRef TInt | TFloat)
   | _, _, Equal, (TRef TBool | TBool), (TRef TBool | TBool) ->

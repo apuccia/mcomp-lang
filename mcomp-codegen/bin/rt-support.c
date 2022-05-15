@@ -12,6 +12,6 @@ void __Prelude_print(int n){
   printf("%d\n", n);
 }
 
-void __Prelude_printfloat(int float){
+void __Prelude_printfloat(float n){
   printf("%.4f\n", n);
 }
