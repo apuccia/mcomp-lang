@@ -122,9 +122,11 @@ let rec codegen_stmt stmt cname scope llv_f llbuilder =
       (* jump to dowhile block *)
       Llvm.build_br llblock_dow llbuilder |> ignore;
 
+      (* in cond block generate e instructions *)
+      Llvm.position_at_end llblock_dow llbuilder;
+      let ret = codegen_stmt s cname scope llv_f llbuilder in
       (* if there is a return statement in body stop otherwise jump to
          to cond testing *)
-      let ret = codegen_stmt s cname scope llv_f llbuilder in
       if ret then () else Llvm.build_br llblock_cond llbuilder |> ignore;
 
       (* in cond block generate e instructions *)
@@ -133,6 +135,7 @@ let rec codegen_stmt stmt cname scope llv_f llbuilder =
       (* continue loop or go to cont block according to value of e *)
       Llvm.build_cond_br llv_e llblock_dow llblock_cont llbuilder |> ignore;
 
+      logger#debug "%s\n" (Llvm.string_of_llmodule ll_module);
       (* continue generating at cont block *)
       Llvm.position_at_end llblock_cont llbuilder;
       ret

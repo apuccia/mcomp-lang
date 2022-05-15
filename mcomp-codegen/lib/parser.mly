@@ -452,7 +452,8 @@ type_:
     bt 
   }
 /* t = type_ "[" "]", following the grammar provided
-this would allow the possibility do declare multidimensional arrays. */
+this would allow the possibility do declare functions that
+receives multidimensional arrays. */
 | t = no_multidim "[" "]"
   { 
     logger#info "Reducing: no_multidim [] -> type_";
@@ -482,13 +483,13 @@ this would allow the possibility do declare multidimensional arrays. */
 ;
 
 no_multidim:
-// array
+// array of basic types
 | bt = basic_type
   { 
     logger#info "Reducing: basic_type -> no_multidim";
     bt 
   }
-// reference to array
+// array of references
 | "&" t = basic_type
   { 
     logger#info "Reducing: &basic_type -> no_multidim";

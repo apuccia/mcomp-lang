@@ -13,13 +13,14 @@
     tbl
 
   let keyword_table =
-    create_hashtable 18 [
+    create_hashtable 20 [
       ("var", VAR);
       ("if", IF);
       ("return", RETURN);
       ("else", ELSE);
       ("while", WHILE);
       ("int", INT);
+      ("float", FLOAT);
       ("char", CHAR);
       ("void", VOID);
       ("bool", BOOL);
@@ -30,6 +31,7 @@
       ("connect", CONNECT);
       ("def", DEF);
       ("for", FOR);
+      ("do", DO);
       ("true", T_BOOL(true));
       ("false", T_BOOL(false));
     ]
