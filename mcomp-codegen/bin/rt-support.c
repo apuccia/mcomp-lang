@@ -11,3 +11,7 @@ int __Prelude_getint(){
 void __Prelude_print(int n){
   printf("%d\n", n);
 }
+
+void __Prelude_printfloat(int float){
+  printf("%.4f\n", n);
+}
