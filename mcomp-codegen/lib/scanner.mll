@@ -73,7 +73,7 @@ let upper = ['A' - 'Z']
 let lower = ['a' - 'z']
 let hexadigit = ['0' - '9' 'a' - 'f' 'A' - 'F']
 let exaint = "0x"hexadigit+
-let exafloat = "0x"hexadigit+.hexadigit+
+let exafloat = "0x"hexadigit+"."hexadigit+
 (* \f not supported by OCaml, I use its byte representation *)
 let special = ['\'' '\b' '\t' '\x0c' '\\' '\r' '\n']
 let characters = [^ '\'' '\b' '\x0c' '\t' '\\' '\r' '\n']
@@ -103,12 +103,11 @@ rule next_token = parse
   }
 | exafloat | digit+'.'digit+ as fnum
   {
-    {
     try 
       let fnumber = Float.of_string fnum
       in
         logger#info "Recognized float literal T_FLOAT";
-        T_FLOAT(integer)
+        T_FLOAT(fnumber)
     with
     | Failure(_) -> 
       let init_pos = Lexing.lexeme_start_p lexbuf in
@@ -117,7 +116,6 @@ rule next_token = parse
       let ec = end_pos.pos_cnum - end_pos.pos_bol in
       raise (Lexing_error (generate_pos init_pos.pos_lnum sc ec,
         "Value " ^ fnum ^ " is not a valid float"))
-  }
   }
 | '\''          
   { character lexbuf }

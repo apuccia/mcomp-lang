@@ -140,7 +140,7 @@ and qualify_expr e cname scope =
       in
       dbg_link (show_expr pp_typ a);
       a
-  | ILiteral _ | CLiteral _ | BLiteral _ -> e
+  | ILiteral _ | CLiteral _ | BLiteral _ | FLiteral _ -> e
   | UnaryOp (op, e) ->
       let uo = UnaryOp (op, qualify_expr e cname scope) <@> e.annot in
       dbg_link (show_expr pp_typ uo);

@@ -661,8 +661,8 @@ expr:
 
     let pos = to_code_position($startpos, $endpos) in 
       let fl = FLiteral(f) in
-        dbg_pos (show_expr_node pp_code_pos il) pos;
-        il <@> pos 
+        dbg_pos (show_expr_node pp_code_pos fl) pos;
+        fl <@> pos 
   }
 | c = T_CHAR
   { 

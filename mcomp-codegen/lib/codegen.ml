@@ -14,6 +14,7 @@ let ll_module = Llvm.create_module ll_context "mcomp-lang"
 let ll_i32type = Llvm.i32_type ll_context
 let ll_i1type = Llvm.i1_type ll_context
 let ll_i8type = Llvm.i8_type ll_context
+let ll_ftype = Llvm.float_type ll_context
 let ll_voidtype = Llvm.void_type ll_context
 
 let rec to_llvm_type t =
@@ -259,6 +260,7 @@ and codegen_expr expr cname scope llv_f llbuilder =
   match expr.node with
   | LV lv -> codegen_lv lv cname scope llv_f llbuilder true false
   | ILiteral i -> Llvm.const_int ll_i32type i
+  | FLiteral f -> Llvm.const_float ll_ftype f
   | Assign (lv, e) ->
       let addr = match e.node with Address _ -> true | _ -> false in
       let llv_e = codegen_expr e cname scope llv_f llbuilder in
@@ -339,72 +341,150 @@ and codegen_expr expr cname scope llv_f llbuilder =
       | _ -> (
           let llv_e1 = codegen_expr e1 cname scope llv_f llbuilder in
           let llv_e2 = codegen_expr e2 cname scope llv_f llbuilder in
-          match op with
-          | Add ->
-              let llv_add = Llvm.build_add llv_e1 llv_e2 "temp_add" llbuilder in
-              dbg_llvalue "Build add instruction" llv_add;
-              llv_add
-          | Sub ->
-              let llv_sub = Llvm.build_sub llv_e1 llv_e2 "temp_sub" llbuilder in
-              dbg_llvalue "Build sub instruction" llv_sub;
-              llv_sub
-          | Mult ->
-              let llv_mul =
-                Llvm.build_mul llv_e1 llv_e2 "temp_mult" llbuilder
+          match (op, e1.annot) with
+          | Add, TInt ->
+              let llv_iadd =
+                Llvm.build_add llv_e1 llv_e2 "temp_iadd" llbuilder
               in
-              dbg_llvalue "Build mult instruction" llv_mul;
-              llv_mul
-          | Div ->
-              let llv_sdiv =
-                Llvm.build_sdiv llv_e1 llv_e2 "temp_div" llbuilder
+              dbg_llvalue "Build iadd instruction" llv_iadd;
+              llv_iadd
+          | Add, TFloat ->
+              let llv_fadd =
+                Llvm.build_fadd llv_e1 llv_e2 "temp_fadd" llbuilder
               in
-              dbg_llvalue "Build div instruction" llv_sdiv;
-              llv_sdiv
-          | Mod ->
-              let llv_srem =
-                Llvm.build_srem llv_e1 llv_e2 "temp_mod" llbuilder
+              dbg_llvalue "Build fadd instruction" llv_fadd;
+              llv_fadd
+          | Sub, TInt ->
+              let llv_isub =
+                Llvm.build_sub llv_e1 llv_e2 "temp_isub" llbuilder
               in
-              dbg_llvalue "Build mod instruction" llv_srem;
-              llv_srem
-          | Equal ->
+              dbg_llvalue "Build sub instruction" llv_isub;
+              llv_isub
+          | Sub, TFloat ->
+              let llv_fsub =
+                Llvm.build_fsub llv_e1 llv_e2 "temp_fsub" llbuilder
+              in
+              dbg_llvalue "Build fsub instruction" llv_fsub;
+              llv_fsub
+          | Mult, TInt ->
+              let llv_imul =
+                Llvm.build_mul llv_e1 llv_e2 "temp_imult" llbuilder
+              in
+              dbg_llvalue "Build imult instruction" llv_imul;
+              llv_imul
+          | Mult, TFloat ->
+              let llv_fmul =
+                Llvm.build_fmul llv_e1 llv_e2 "temp_fmul" llbuilder
+              in
+              dbg_llvalue "Build fmul instruction" llv_fmul;
+              llv_fmul
+          | Div, TInt ->
+              let llv_isdiv =
+                Llvm.build_sdiv llv_e1 llv_e2 "temp_idiv" llbuilder
+              in
+              dbg_llvalue "Build idiv instruction" llv_isdiv;
+              llv_isdiv
+          | Div, TFloat ->
+              let llv_fdiv =
+                Llvm.build_fdiv llv_e1 llv_e2 "temp_fdiv" llbuilder
+              in
+              dbg_llvalue "Build fdiv instruction" llv_fdiv;
+              llv_fdiv
+          | Mod, TInt ->
+              let llv_isrem =
+                Llvm.build_srem llv_e1 llv_e2 "temp_imod" llbuilder
+              in
+              dbg_llvalue "Build imod instruction" llv_isrem;
+              llv_isrem
+          | Mod, TFloat ->
+              let llv_fsrem =
+                Llvm.build_frem llv_e1 llv_e2 "temp_fmod" llbuilder
+              in
+              dbg_llvalue "Build fmod instruction" llv_fsrem;
+              llv_fsrem
+          | Equal, TInt ->
               let llv_icmp_eq =
-                Llvm.build_icmp Llvm.Icmp.Eq llv_e1 llv_e2 "temp_equal"
+                Llvm.build_icmp Llvm.Icmp.Eq llv_e1 llv_e2 "temp_iequal"
                   llbuilder
               in
-              dbg_llvalue "Build equal instruction" llv_icmp_eq;
+              dbg_llvalue "Build iequal instruction" llv_icmp_eq;
               llv_icmp_eq
-          | Neq ->
-              let llv_icmp_ne =
-                Llvm.build_icmp Llvm.Icmp.Ne llv_e1 llv_e2 "temp_neq" llbuilder
+          | Equal, TFloat ->
+              let llv_fcmp_eq =
+                Llvm.build_fcmp Llvm.Fcmp.Oeq llv_e1 llv_e2 "temp_fequal"
+                  llbuilder
               in
-              dbg_llvalue "Build not equal instruction" llv_icmp_ne;
+              dbg_llvalue "Build fequal instruction" llv_fcmp_eq;
+              llv_fcmp_eq
+          | Neq, TInt ->
+              let llv_icmp_ne =
+                Llvm.build_icmp Llvm.Icmp.Ne llv_e1 llv_e2 "temp_ineq" llbuilder
+              in
+              dbg_llvalue "Build i not equal instruction" llv_icmp_ne;
               llv_icmp_ne
-          | Less ->
+          | Neq, TFloat ->
+              let llv_fcmp_neq =
+                Llvm.build_fcmp Llvm.Fcmp.One llv_e1 llv_e2 "temp_fneq"
+                  llbuilder
+              in
+              dbg_llvalue "Build fnequal instruction" llv_fcmp_neq;
+              llv_fcmp_neq
+          | Less, TInt ->
               let llv_icmp_slt =
                 Llvm.build_icmp Llvm.Icmp.Slt llv_e1 llv_e2 "temp_less"
                   llbuilder
               in
-              dbg_llvalue "Build less instruction" llv_icmp_slt;
+              dbg_llvalue "Build iless instruction" llv_icmp_slt;
               llv_icmp_slt
-          | Leq ->
-              let llv_icmp_sle =
-                Llvm.build_icmp Llvm.Icmp.Sle llv_e1 llv_e2 "temp_leq" llbuilder
-              in
-              dbg_llvalue "Build less or equal instruction" llv_icmp_sle;
-              llv_icmp_sle
-          | Greater ->
-              let llv_icmp_sgt =
-                Llvm.build_icmp Llvm.Icmp.Sgt llv_e1 llv_e2 "temp_greater"
+          | Less, TFloat ->
+              let llv_fcmp_olt =
+                Llvm.build_fcmp Llvm.Fcmp.Olt llv_e1 llv_e2 "temp_fless"
                   llbuilder
               in
-              dbg_llvalue "Build greater instruction" llv_icmp_sgt;
-              llv_icmp_sgt
-          | Geq ->
-              let llv_icmp_sge =
-                Llvm.build_icmp Llvm.Icmp.Sge llv_e1 llv_e2 "temp_geq" llbuilder
+              dbg_llvalue "Build fless instruction" llv_fcmp_olt;
+              llv_fcmp_olt
+          | Leq, TInt ->
+              let llv_icmp_sle =
+                Llvm.build_icmp Llvm.Icmp.Sle llv_e1 llv_e2 "temp_ileq"
+                  llbuilder
               in
-              dbg_llvalue "Build greater or equal instruction" llv_icmp_sge;
+              dbg_llvalue "Build i less or equal instruction" llv_icmp_sle;
+              llv_icmp_sle
+          | Leq, TFloat ->
+              let llv_fcmp_ole =
+                Llvm.build_fcmp Llvm.Fcmp.Ole llv_e1 llv_e2 "temp_fleq"
+                  llbuilder
+              in
+              dbg_llvalue "Build f less or equal instruction" llv_fcmp_ole;
+              llv_fcmp_ole
+          | Greater, TInt ->
+              let llv_icmp_sgt =
+                Llvm.build_icmp Llvm.Icmp.Sgt llv_e1 llv_e2 "temp_igreater"
+                  llbuilder
+              in
+              dbg_llvalue "Build igreater instruction" llv_icmp_sgt;
+              llv_icmp_sgt
+          | Greater, TFloat ->
+              let llv_fcmp_ogt =
+                Llvm.build_fcmp Llvm.Fcmp.Ogt llv_e1 llv_e2 "temp_fgreater"
+                  llbuilder
+              in
+              dbg_llvalue "Build fgreater instruction" llv_fcmp_ogt;
+              llv_fcmp_ogt
+          | Geq, TInt ->
+              let llv_icmp_sge =
+                Llvm.build_icmp Llvm.Icmp.Sge llv_e1 llv_e2 "temp_igeq"
+                  llbuilder
+              in
+              dbg_llvalue "Build i greater or equal instruction" llv_icmp_sge;
               llv_icmp_sge
+          | Geq, TFloat ->
+              let llv_fcmp_oge =
+                Llvm.build_fcmp Llvm.Fcmp.Oge llv_e1 llv_e2 "temp_fgeq"
+                  llbuilder
+              in
+              dbg_llvalue "Build f greater or equal instruction" llv_fcmp_oge;
+              llv_fcmp_oge
           | _ -> failwith "impossible case"))
   | Call (id1, id2, el) -> (
       let mangled_name =
