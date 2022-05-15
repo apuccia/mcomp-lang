@@ -10,7 +10,7 @@ component CAdder provides Adder {
 
 component EntryPoint provides App uses Adder {
   def main() : int {
-    print( add(17.5, 25.5) );
+    printfloat( add(17.5, 25.5) );
     return 0;
   }
 }
