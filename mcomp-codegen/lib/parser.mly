@@ -457,8 +457,9 @@ type_:
     bt 
   }
 /* t = type_ "[" "]", following the grammar provided
-this would allow the possibility do declare functions that
-receives multidimensional arrays. */
+this would allow the possibility do declare 
+multidimensional arrays and to declare functions 
+that receives multidimensional arrays */
 | t = no_multidim "[" "]"
   { 
     logger#info "Reducing: no_multidim [] -> type_";
@@ -467,7 +468,7 @@ receives multidimensional arrays. */
         dbg_pos (show_typ a) pos;
         a 
   }
-// t = type_ s = delimited("[", T_INT, "]")
+/* | t = type_ s = delimited("[", T_INT, "]") */
 | t = no_multidim s = delimited("[", T_INT, "]")
   { 
     logger#info 
