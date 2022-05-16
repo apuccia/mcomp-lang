@@ -154,6 +154,16 @@ rule next_token = parse
   { logger#info "Recognized '%%' = MOD"; MOD }
 | '='           
   { logger#info "Recognized '=' = ASSIGN"; ASSIGN }
+| "+="           
+  { logger#info "Recognized '+=' = PASSIGN"; PASSIGN }
+| "-="           
+  { logger#info "Recognized '-=' = MINASSIGN"; MINASSIGN }
+| "*="           
+  { logger#info "Recognized '*=' = TASSIGN"; TASSIGN }
+| "/="           
+  { logger#info "Recognized '/=' = DASSIGN"; DASSIGN }
+| "%="           
+  { logger#info "Recognized '%%=' = MODASSIGN"; MODASSIGN }
 | "=="          
   { logger#info "Recognized '==' = EQUAL"; EQUAL }
 | "!="          

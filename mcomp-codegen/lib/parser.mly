@@ -83,6 +83,11 @@
 %token DIV "/"
 %token MOD "%"
 %token ASSIGN "="
+%token PASSIGN "+="
+%token MINASSIGN "-="
+%token TASSIGN "*="
+%token DASSIGN "/="
+%token MODASSIGN "%="
 %token EQUAL "=="
 %token NEQ "!="
 %token LESS "<"
@@ -110,7 +115,7 @@
 /* Precedence and associativity specification */
 %nonassoc then_prec
 %nonassoc "else"
-%right "="
+%right "=" "+=" "-=" "*=" "/=" "%="
 %left "||"
 %left "&&"
 %left "==", "!=" 
@@ -703,6 +708,51 @@ expr:
 
     let pos = to_code_position($startpos, $endpos) in 
       let a = Assign(l, e) in
+        dbg_pos (show_expr_node pp_code_pos a) pos;
+        a <@> pos 
+  }
+| l = l_value "+=" e = expr
+  { 
+    logger#info "Reducing: l_value += expr -> expr";
+
+    let pos = to_code_position($startpos, $endpos) in 
+      let a = Assign(l, BinaryOp(Add, LV(l) <@> pos, e) <@> pos) in
+        dbg_pos (show_expr_node pp_code_pos a) pos;
+        a <@> pos 
+  }
+| l = l_value "-=" e = expr
+  { 
+    logger#info "Reducing: l_value -= expr -> expr";
+
+    let pos = to_code_position($startpos, $endpos) in 
+      let a = Assign(l, BinaryOp(Sub, LV(l) <@> pos, e) <@> pos) in
+        dbg_pos (show_expr_node pp_code_pos a) pos;
+        a <@> pos 
+  }
+| l = l_value "*=" e = expr
+  { 
+    logger#info "Reducing: l_value *= expr -> expr";
+
+    let pos = to_code_position($startpos, $endpos) in 
+      let a = Assign(l, BinaryOp(Mult, LV(l) <@> pos, e) <@> pos) in
+        dbg_pos (show_expr_node pp_code_pos a) pos;
+        a <@> pos 
+  }
+| l = l_value "/=" e = expr
+  { 
+    logger#info "Reducing: l_value /= expr -> expr";
+
+    let pos = to_code_position($startpos, $endpos) in 
+      let a = Assign(l, BinaryOp(Div, LV(l) <@> pos, e) <@> pos) in
+        dbg_pos (show_expr_node pp_code_pos a) pos;
+        a <@> pos 
+  }
+| l = l_value "%=" e = expr
+  { 
+    logger#info "Reducing: l_value %%= expr -> expr";
+
+    let pos = to_code_position($startpos, $endpos) in 
+      let a = Assign(l, BinaryOp(Mod, LV(l) <@> pos, e) <@> pos) in
         dbg_pos (show_expr_node pp_code_pos a) pos;
         a <@> pos 
   }
