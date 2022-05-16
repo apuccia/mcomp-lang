@@ -167,7 +167,7 @@ let rec codegen_stmt stmt cname scope llv_f llbuilder =
       has_return
   | Skip -> false
 
-and codegen_lv lv cname scope llv_f llbuilder load addr =
+and codegen_lv lv cname scope llv_f llbuilder to_load get_addr =
   match lv.node with
   | AccVar (id1, id2) -> (
       let llv_lv =
@@ -176,10 +176,10 @@ and codegen_lv lv cname scope llv_f llbuilder load addr =
       in
       match lv.annot with
       | TRef _ ->
-          if addr then llv_lv
+          if get_addr then llv_lv
           else
             let llv_ref = Llvm.build_load llv_lv "" llbuilder in
-            if load then (
+            if to_load then (
               let llv_deref = Llvm.build_load llv_ref "" llbuilder in
               dbg_llvalue "Dereferencing" llv_deref;
               llv_deref)
@@ -195,7 +195,7 @@ and codegen_lv lv cname scope llv_f llbuilder load addr =
           dbg_llvalue "Load address of array first element" llv_aea;
           llv_aea
       | _ ->
-          if load then (
+          if to_load then (
             let llv_e = Llvm.build_load llv_lv "" llbuilder in
             dbg_llvalue "Accessing basic type var" llv_e;
             llv_e)
@@ -221,7 +221,7 @@ and codegen_lv lv cname scope llv_f llbuilder load addr =
               [| Llvm.const_int ll_i32type 0; llv_e |]
               "" llbuilder
           in
-          if load then (
+          if to_load then (
             (* dereference *)
             let llv_ref = Llvm.build_load llv_aea "" llbuilder in
             dbg_llvalue "Loading reference" llv_ref;
@@ -237,7 +237,7 @@ and codegen_lv lv cname scope llv_f llbuilder load addr =
               "" llbuilder
           in
           dbg_llvalue "Loading address of array element" llv_aea;
-          if load then (
+          if to_load then (
             let llv_ae = Llvm.build_load llv_aea "" llbuilder in
             dbg_llvalue "Loading array element" llv_ae;
             llv_ae)
@@ -250,7 +250,7 @@ and codegen_lv lv cname scope llv_f llbuilder load addr =
             Llvm.build_in_bounds_gep llv_aa [| llv_e |] "" llbuilder
           in
           dbg_llvalue "Loading address" llv_aea;
-          if load then (
+          if to_load then (
             let llv_ae = Llvm.build_load llv_aea "" llbuilder in
             dbg_llvalue "Loading element" llv_ae;
             llv_ae)
