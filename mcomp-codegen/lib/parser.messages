@@ -219,7 +219,7 @@ compilation_unit: INTERFACE ID LCBRACK DEF ID LRBRACK ID TYPESIG BOOL SEMICOLON
 ## In state 14, spurious reduction of production var_sign -> ID TYPESIG type_
 ##
 
-Expected ")" closing arguments list for function.
+Expected ")" closing arguments list for function or other arguments.
 
 compilation_unit: INTERFACE ID LCBRACK DEF ID LRBRACK ID TYPESIG BOOL COMMA WHILE
 ##
