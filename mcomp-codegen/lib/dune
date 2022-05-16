@@ -1,7 +1,7 @@
 (library
  (name mcomp_lang)
  (public_name mcomp-lang)
- (libraries llvm llvm.analysis llvm.scalar_opts easy_logging)
+ (libraries menhirLib llvm llvm.analysis llvm.scalar_opts easy_logging)
  (preprocess
   (pps ppx_deriving.show ppx_deriving.ord ppx_deriving.eq)))
 
@@ -10,4 +10,9 @@
 
 (menhir
  (modules parser)
- (flags --explain --dump --strict))
+ (flags --explain --dump --strict --table))
+
+(rule 
+ (targets parser_messages.ml)
+ (deps parser.messages parser.mly)
+ (action (with-stdout-to %{targets} (run menhir --compile-errors %{deps}))))

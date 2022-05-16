@@ -41,7 +41,8 @@ let process_source filename =
   let lexbuf = Lexing.from_string ~with_positions:true source in 
   try
     lexbuf |>
-    Parsing.parse Scanner.next_token |>
+    (* Parsing.parse Scanner.next_token |> *)
+    Parsing.parse |>
     Semantic_analysis.type_check |>
     Ast.show_typed_compilation_unit |>
     Printf.printf "Semantic analysis succeded!\n\n%s\n"  

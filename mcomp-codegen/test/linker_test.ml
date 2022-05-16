@@ -43,7 +43,8 @@ let process_source filename =
   let lexbuf = Lexing.from_string ~with_positions:true source in 
   try
     lexbuf |>
-    Parsing.parse Scanner.next_token |>
+    (* Parsing.parse Scanner.next_token |> *)
+    Parsing.parse |>
     Semantic_analysis.type_check |>
     Linker.wire_components |>
     Ast.show_typed_compilation_unit |> 
