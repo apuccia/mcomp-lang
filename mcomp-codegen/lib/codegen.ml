@@ -111,7 +111,7 @@ let rec codegen_stmt stmt cname scope llv_f llbuilder =
 
       (* if there is a return statement in body stop otherwise jump to
          to cond testing *)
-      if ret then () else Llvm.build_br llblock_cond llbuilder |> ignore;
+      if not ret then Llvm.build_br llblock_cond llbuilder |> ignore;
 
       (* continue generating at cont block *)
       Llvm.position_at_end llblock_cont llbuilder;
@@ -129,7 +129,7 @@ let rec codegen_stmt stmt cname scope llv_f llbuilder =
       let ret = codegen_stmt s cname scope llv_f llbuilder in
       (* if there is a return statement in body stop otherwise jump to
          to cond testing *)
-      if ret then () else Llvm.build_br llblock_cond llbuilder |> ignore;
+      if not ret then Llvm.build_br llblock_cond llbuilder |> ignore;
 
       (* in cond block generate e instructions *)
       Llvm.position_at_end llblock_cond llbuilder;
@@ -137,7 +137,6 @@ let rec codegen_stmt stmt cname scope llv_f llbuilder =
       (* continue loop or go to cont block according to value of e *)
       Llvm.build_cond_br llv_e llblock_dow llblock_cont llbuilder |> ignore;
 
-      logger#debug "%s\n" (Llvm.string_of_llmodule ll_module);
       (* continue generating at cont block *)
       Llvm.position_at_end llblock_cont llbuilder;
       ret
@@ -169,53 +168,50 @@ let rec codegen_stmt stmt cname scope llv_f llbuilder =
   | Skip -> false
 
 and codegen_lv lv cname scope llv_f llbuilder load addr =
-  let load_lv llv_lv t =
-    match t with
-    | TRef _ ->
-        if addr then llv_lv
-        else
-          let llv_ref = Llvm.build_load llv_lv "" llbuilder in
+  match lv.node with
+  | AccVar (id1, id2) -> (
+      let llv_lv =
+        if Option.is_none id1 then lookup id2 scope
+        else Llvm.lookup_global (Option.get id1 ++ id2) ll_module |> Option.get
+      in
+      match lv.annot with
+      | TRef _ ->
+          if addr then llv_lv
+          else
+            let llv_ref = Llvm.build_load llv_lv "" llbuilder in
+            if load then (
+              let llv_deref = Llvm.build_load llv_ref "" llbuilder in
+              dbg_llvalue "Dereferencing" llv_deref;
+              llv_deref)
+            else (
+              dbg_llvalue "Loading reference" llv_ref;
+              llv_ref)
+      | TArray (_, Some _) ->
+          let llv_aea =
+            Llvm.build_in_bounds_gep llv_lv
+              [| Llvm.const_int ll_i32type 0; Llvm.const_int ll_i32type 0 |]
+              "" llbuilder
+          in
+          dbg_llvalue "Load address of array first element" llv_aea;
+          llv_aea
+      | _ ->
           if load then (
-            let llv_deref = Llvm.build_load llv_ref "" llbuilder in
-            dbg_llvalue "Dereferencing" llv_deref;
-            llv_deref)
-          else (
-            dbg_llvalue "Loading reference" llv_ref;
-            llv_ref)
-    | TArray (_, Some _) ->
-        let llv_aea =
-          Llvm.build_in_bounds_gep llv_lv
-            [| Llvm.const_int ll_i32type 0; Llvm.const_int ll_i32type 0 |]
-            "" llbuilder
-        in
-        dbg_llvalue "Load address of array first element" llv_aea;
-        llv_aea
-    | _ ->
-        if load then (
-          let llv_e = Llvm.build_load llv_lv "" llbuilder in
-          dbg_llvalue "Accessing basic type var" llv_e;
-          llv_e)
-        else llv_lv
-  in
-
-  match (lv.node, lv.annot) with
-  | AccVar (None, id), t ->
-      let llv_lv = lookup id scope in
-      load_lv llv_lv t
-  | AccVar (Some cname, id), t ->
-      let mangled_name = cname ++ id in
-      let llv_gvar = Llvm.lookup_global mangled_name ll_module |> Option.get in
-      load_lv llv_gvar t
-  | AccIndex (lv, e), _ -> (
+            let llv_e = Llvm.build_load llv_lv "" llbuilder in
+            dbg_llvalue "Accessing basic type var" llv_e;
+            llv_e)
+          else llv_lv)
+  | AccIndex (lv, e) -> (
       (* generate instructions for array indexing *)
       let llv_e = codegen_expr e cname scope llv_f llbuilder in
       (* retrieve lv address *)
       let llv_lv =
         match lv.node with
-        | AccVar (Some id1, id2) ->
-            Llvm.lookup_global (id1 ++ id2) ll_module |> Option.get
-        | AccVar (None, id2) -> lookup id2 scope
+        | AccVar (id1, id2) ->
+            if Option.is_none id1 then lookup id2 scope
+            else
+              Llvm.lookup_global (Option.get id1 ++ id2) ll_module |> Option.get
         | _ -> failwith "impossible case"
+        (* no multi-dim arrays *)
       in
       match lv.annot with
       | TArray (TRef _, Some _) ->
@@ -624,8 +620,10 @@ let codegen_body fd cname =
 
   let blocks_to_delete =
     Llvm.fold_left_blocks
-      (fun acc bb ->
-        match Llvm.block_terminator bb with Some _ -> acc | None -> bb :: acc)
+      (fun to_delete block ->
+        match Llvm.block_terminator block with
+        | Some _ -> to_delete
+        | None -> block :: to_delete)
       [] llv_f
   in
   List.iter (fun llblock -> Llvm.delete_block llblock) blocks_to_delete
