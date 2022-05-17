@@ -1,0 +1,95 @@
+<compilation_unit> ::= <top_declaration>* EOF
+
+<top_declaration> ::= 'interface' ID '{' <i_member_declaration>+ '}'
+                    | 'component' ID [<provide_clause>] [<use_clause>] '{'
+                      <c_member_declaration>+ '}'
+                    | 'connect' <link>
+                    | 'connect' '{' <link>* '}'
+
+<link> ::= ID '.' ID '<-' ID '.' ID ';'
+
+<i_member_declaration> ::= 'var' <var_sign> ';'
+                         | <fun_prototype> ';'
+
+<provide_clause> ::= 'provides' ID (',' ID)*
+
+<use_clause> ::= 'uses' ID (',' ID)*
+
+<var_sign> ::= ID ':' <type_>
+
+<fun_prototype> ::= 'def' ID '(' [<var_sign> (',' <var_sign>)*] ')' [':'
+                    <basic_type>]
+
+<c_member_declaration> ::= 'var' <var_sign> ';'
+                         | <fun_declaration>
+
+<fun_declaration> ::= <fun_prototype> <block>
+
+<block> ::= '{' <block_content>* '}'
+
+<block_content> ::= <stmt>
+                  | 'var' <var_sign> ';'
+
+<type_> ::= <basic_type>
+          | <no_multidim> '[' ']'
+          | <no_multidim> '[' T_INT ']'
+          | '&' <basic_type>
+
+<no_multidim> ::= <basic_type>
+                | '&' <basic_type>
+
+<basic_type> ::= 'int'
+               | 'float'
+               | 'char'
+               | 'void'
+               | 'bool'
+
+<stmt> ::= 'return' [<expr>] ';'
+         | [<expr>] ';'
+         | <block>
+         | 'while' '(' <expr> ')' <stmt>
+         | 'if' '(' <expr> ')' <stmt> 'else' <stmt>
+         | 'if' '(' <expr> ')' <stmt>
+         | 'for' '(' [<expr>] ';' [<expr>] ';' [<expr>] ')' <stmt>
+         | 'do' <stmt> 'while' '(' <expr> ')' ';'
+
+<expr> ::= T_INT
+         | T_FLOAT
+         | T_CHAR
+         | T_BOOL
+         | '(' <expr> ')'
+         | '&' <l_value>
+         | <l_value> '=' <expr>
+         | <l_value> '+=' <expr>
+         | <l_value> '-=' <expr>
+         | <l_value> '*=' <expr>
+         | <l_value> '/=' <expr>
+         | <l_value> '%=' <expr>
+         | '!' <expr>
+         | ID '(' [<expr> (',' <expr>)*] ')'
+         | <l_value>
+         | '-' <expr>
+         | <expr> <bin_op> <expr>
+         | <l_value> '++'
+         | <l_value> '--'
+         | '++' <l_value>
+         | '--' <expr>
+
+<l_value> ::= ID
+            | ID '[' <expr> ']'
+
+<bin_op> ::= '+'
+           | '-'
+           | '*'
+           | '%'
+           | '/'
+           | '&&'
+           | '||'
+           | '<'
+           | '>'
+           | '<='
+           | '>='
+           | '=='
+           | '!='
+
+
