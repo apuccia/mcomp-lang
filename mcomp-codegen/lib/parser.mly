@@ -88,6 +88,8 @@
 %token TASSIGN "*="
 %token DASSIGN "/="
 %token MODASSIGN "%="
+%token PLUSPLUS "++"
+%token MINUSMINUS "--"
 %token EQUAL "=="
 %token NEQ "!="
 %token LESS "<"
@@ -809,6 +811,42 @@ expr:
       let bo = BinaryOp(b, e1, e2) in
         dbg_pos (show_expr_node pp_code_pos bo) pos;
         bo <@> pos
+  }
+| lv = l_value "++"
+  {
+    logger#info "Reducing: lv++ -> expr";
+
+    let pos = to_code_position($startpos, $endpos) in 
+      let op = DoubleOp(PostIncr, lv) in
+        dbg_pos (show_expr_node pp_code_pos op) pos;
+        op <@> pos
+  }
+| lv = l_value "--"
+  {
+    logger#info "Reducing: lv-- -> expr";
+
+    let pos = to_code_position($startpos, $endpos) in 
+      let op = DoubleOp(PostDecr, lv) in
+        dbg_pos (show_expr_node pp_code_pos op) pos;
+        op <@> pos
+  }
+| "++" lv = l_value
+  {
+    logger#info "Reducing: ++lv -> expr";
+
+    let pos = to_code_position($startpos, $endpos) in 
+      let op = DoubleOp(PreIncr, lv) in
+        dbg_pos (show_expr_node pp_code_pos op) pos;
+        op <@> pos
+  }
+| "--" lv = l_value
+  {
+    logger#info "Reducing: --lv -> expr";
+
+    let pos = to_code_position($startpos, $endpos) in 
+      let op = DoubleOp(PreDecr, lv) in
+        dbg_pos (show_expr_node pp_code_pos op) pos;
+        op <@> pos
   }
 ;
 

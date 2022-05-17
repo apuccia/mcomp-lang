@@ -145,6 +145,10 @@ and qualify_expr e cname scope =
       let uo = UnaryOp (op, qualify_expr e cname scope) <@> e.annot in
       dbg_link (show_expr pp_typ uo);
       uo
+  | DoubleOp (op, lv) ->
+      let dop = DoubleOp (op, qualify_lv lv cname scope) <@> e.annot in
+      dbg_link (show_expr pp_typ dop);
+      dop
   | Address lv ->
       let a = Address (qualify_lv lv cname scope) <@> e.annot in
       dbg_link (show_expr pp_typ a);

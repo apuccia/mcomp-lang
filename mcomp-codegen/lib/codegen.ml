@@ -284,6 +284,122 @@ and codegen_expr expr cname scope llv_f llbuilder =
           let llv_not = Llvm.build_not llv_e "temp_not" llbuilder in
           dbg_llvalue "Build not instruction" llv_not;
           llv_not)
+  | DoubleOp (op, lv) -> (
+      let llv_v = codegen_lv lv cname scope llv_f llbuilder true false in
+      match (op, expr.annot) with
+      | PreIncr, TInt ->
+          let llv_p1 =
+            Llvm.build_add llv_v
+              (Llvm.const_int ll_i32type 1)
+              "temp_ipreincr" llbuilder
+          in
+          dbg_llvalue "Build iadd (preincr)" llv_p1;
+          let llv_s =
+            Llvm.build_store llv_p1
+              (codegen_lv lv cname scope llv_f llbuilder false false)
+              llbuilder
+          in
+          dbg_llvalue "Build store i (preincr)" llv_s;
+          llv_p1
+      | PreIncr, TFloat ->
+          let llv_p1 =
+            Llvm.build_fadd llv_v
+              (Llvm.const_float ll_ftype 1.0)
+              "temp_fpreincr" llbuilder
+          in
+          dbg_llvalue "Build fadd (preincr)" llv_p1;
+          let llv_s =
+            Llvm.build_store llv_p1
+              (codegen_lv lv cname scope llv_f llbuilder false false)
+              llbuilder
+          in
+          dbg_llvalue "Build store f (preincr)" llv_s;
+          llv_p1
+      | PreDecr, TInt ->
+          let llv_m1 =
+            Llvm.build_sub llv_v
+              (Llvm.const_int ll_i32type 1)
+              "temp_ipredecr" llbuilder
+          in
+          dbg_llvalue "Build isub (predecr)" llv_m1;
+          let llv_s =
+            Llvm.build_store llv_m1
+              (codegen_lv lv cname scope llv_f llbuilder false false)
+              llbuilder
+          in
+          dbg_llvalue "Build store i (predecr)" llv_s;
+          llv_m1
+      | PreDecr, TFloat ->
+          let llv_m1 =
+            Llvm.build_fsub llv_v
+              (Llvm.const_float ll_ftype 1.0)
+              "temp_fpredecr" llbuilder
+          in
+          dbg_llvalue "Build fsub (predecr)" llv_m1;
+          let llv_s =
+            Llvm.build_store llv_m1
+              (codegen_lv lv cname scope llv_f llbuilder false false)
+              llbuilder
+          in
+          dbg_llvalue "Build store f (predecr)" llv_s;
+          llv_m1
+      | PostIncr, TInt ->
+          let llv_p1 =
+            Llvm.build_add llv_v
+              (Llvm.const_int ll_i32type 1)
+              "temp_ipostincr" llbuilder
+          in
+          dbg_llvalue "Build iadd (postincr)" llv_p1;
+          let llv_s =
+            Llvm.build_store llv_p1
+              (codegen_lv lv cname scope llv_f llbuilder false false)
+              llbuilder
+          in
+          dbg_llvalue "Build store i (postincr)" llv_s;
+          llv_v
+      | PostIncr, TFloat ->
+          let llv_p1 =
+            Llvm.build_fadd llv_v
+              (Llvm.const_float ll_ftype 1.0)
+              "temp_fpostincr" llbuilder
+          in
+          dbg_llvalue "Build fadd (postincr)" llv_p1;
+          let llv_s =
+            Llvm.build_store llv_p1
+              (codegen_lv lv cname scope llv_f llbuilder false false)
+              llbuilder
+          in
+          dbg_llvalue "Build store f (postincr)" llv_s;
+          llv_v
+      | PostDecr, TInt ->
+          let llv_m1 =
+            Llvm.build_sub llv_v
+              (Llvm.const_int ll_i32type 1)
+              "temp_ipostdecr" llbuilder
+          in
+          dbg_llvalue "Build iadd (postdecr)" llv_m1;
+          let llv_s =
+            Llvm.build_store llv_m1
+              (codegen_lv lv cname scope llv_f llbuilder false false)
+              llbuilder
+          in
+          dbg_llvalue "Build store i (postdecr)" llv_s;
+          llv_v
+      | PostDecr, TFloat ->
+          let llv_m1 =
+            Llvm.build_fsub llv_v
+              (Llvm.const_float ll_ftype 1.0)
+              "temp_fpostdecr" llbuilder
+          in
+          dbg_llvalue "Build fadd (postdecr)" llv_m1;
+          let llv_s =
+            Llvm.build_store llv_m1
+              (codegen_lv lv cname scope llv_f llbuilder false false)
+              llbuilder
+          in
+          dbg_llvalue "Build store f (postdecr)" llv_s;
+          llv_v
+      | _ -> failwith "impossible case")
   | Address lv -> codegen_lv lv cname scope llv_f llbuilder false true
   | BinaryOp (op, e1, e2) -> (
       match op with

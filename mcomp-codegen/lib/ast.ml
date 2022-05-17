@@ -15,6 +15,7 @@ type binop =
 [@@deriving show { with_path = false }, ord, eq]
 
 type uop = Neg | Not [@@deriving show { with_path = false }, ord, eq]
+type dop = PostIncr | PostDecr | PreIncr | PreDecr [@@deriving show { with_path = false }, ord, eq]
 type identifier = string [@@deriving show { with_path = false }, ord, eq]
 
 type typ =
@@ -45,6 +46,7 @@ and 'a expr_node =
   | CLiteral of char (* Char literal *)
   | BLiteral of bool (* Bool literal *)
   | UnaryOp of uop * 'a expr (* Unary primitive operator *)
+  | DoubleOp of dop * 'a lvalue (* extension pre/post incr/decrement*)
   | Address of 'a lvalue (* Address of a variable *)
   | BinaryOp of binop * 'a expr * 'a expr (* Binary primitive operator *)
   | Call of identifier option * identifier * 'a expr list

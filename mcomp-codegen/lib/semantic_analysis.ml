@@ -241,6 +241,21 @@ let rec check_exp e cname scope =
            ^ " but was expected of type " ^ show_typ TInt ^ " (or "
            ^ show_typ (TRef TInt) ^ ") or type " ^ show_typ TFloat ^ " (or "
            ^ show_typ (TRef TFloat) ^ ")"))
+  | DoubleOp (op, lv) -> (
+      let t_lv = check_lvalue lv cname scope in
+      match (op, t_lv.annot) with
+      | ( (PreIncr | PostIncr | PreDecr | PostDecr),
+          ((TInt as t) | (TFloat as t) | TRef (TInt as t) | TRef (TFloat as t))
+        ) ->
+          let t_o = DoubleOp (op, t_lv) <@> t in
+          dbg_typ (show_expr pp_typ t_o) e.annot;
+          t_o
+      | (PreIncr | PostIncr | PreDecr | PostDecr), _ ->
+          raise_semantic_error e.annot
+            ("This expression has type " ^ show_typ t_lv.annot
+           ^ " but was expected of type " ^ show_typ TInt ^ " (or "
+           ^ show_typ (TRef TInt) ^ ") or type " ^ show_typ TFloat ^ " (or "
+           ^ show_typ (TRef TFloat) ^ ")"))
   | Address lv ->
       let t_lv = check_lvalue lv cname scope in
       let t_a = Address t_lv <@> TRef t_lv.annot in
