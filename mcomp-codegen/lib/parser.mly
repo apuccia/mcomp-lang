@@ -98,7 +98,7 @@
 %token GEQ ">="
 %token AND "&&"
 %token OR "||"
-%token NEG "!"
+%token NOT "!"
 
 /* Other tokens */
 %token LRBRACK "("
@@ -124,7 +124,13 @@
 %nonassoc ">", "<", ">=", "<="
 %left "+", "-"
 %left "*", "/", "%" 
+
+%right "--"
+
 %nonassoc "!"
+
+/* %nonassoc minus_prec
+%nonassoc not_prec */
 
 /* Start symbol */
 %start compilation_unit
@@ -794,7 +800,7 @@ expr:
         dbg_pos (show_expr_node pp_code_pos lv) pos;
         lv <@> pos
   }
-| "-" e = expr
+| "-" e = expr/*  %prec minus_prec */
   { 
     logger#info "Reducing: -expr -> expr";
 
@@ -839,14 +845,20 @@ expr:
         dbg_pos (show_expr_node pp_code_pos op) pos;
         op <@> pos
   }
-| "--" lv = l_value
+| "--" e = expr
   {
     logger#info "Reducing: --lv -> expr";
 
     let pos = to_code_position($startpos, $endpos) in 
-      let op = DoubleOp(PreDecr, lv) in
-        dbg_pos (show_expr_node pp_code_pos op) pos;
-        op <@> pos
+      match e.node with 
+      | LV(lv) ->
+        let op = DoubleOp(PreDecr, lv) in
+          dbg_pos (show_expr_node pp_code_pos op) pos;
+          op <@> pos
+      | _ -> 
+        let uop = UnaryOp(Neg, UnaryOp(Neg, e) <@> pos) in 
+          dbg_pos (show_expr_node pp_code_pos uop) pos;
+          uop <@> pos
   }
 ;
 
