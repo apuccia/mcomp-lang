@@ -144,8 +144,12 @@ rule next_token = parse
   { logger#info "Recognized '&' = REF"; REF }
 | '+'           
   { logger#info "Recognized '+' = PLUS"; PLUS }
+| "++"           
+  { logger#info "Recognized '++' = PLUSPLUS"; PLUSPLUS }
 | '-'           
   { logger#info "Recognized '-' = MINUS"; MINUS }
+| "--"           
+  { logger#info "Recognized '--' = MINUSMINUS"; MINUSMINUS }
 | '*'           
   { logger#info "Recognized '*' = TIMES"; TIMES }
 | '/'           
@@ -181,7 +185,7 @@ rule next_token = parse
 | "||"          
   { logger#info "Recognized '||' = OR"; OR }
 | '!'           
-  { logger#info "Recognized '!' = NEG"; NEG }
+  { logger#info "Recognized '!' = NOT"; NOT }
 | '('           
   { logger#info "Recognized '(' = LRBRACK"; LRBRACK }
 | ')'           
