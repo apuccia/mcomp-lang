@@ -501,7 +501,7 @@ compilation_unit: COMPONENT ID USES ID USES
 ## In state 67, spurious reduction of production option(use_clause) -> use_clause
 ##
 
-Only one "uses" clause expected in component declaration.
+Only one clause of this type expected in component declaration.
 
 compilation_unit: COMPONENT ID LCBRACK WHILE
 ##
@@ -613,6 +613,19 @@ compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK REF WHILE
 
 This identifier is a reserved keyword and cannot be used as a name of variable.
 
+compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK PLUSPLUS ID WHILE
+##
+## Ends in an error in state: 84.
+##
+## l_value -> ID . [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
+## l_value -> ID . LSBRACK expr RSBRACK [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
+##
+## The known suffix of the stack is as follows:
+## ID
+##
+
+Expected ";".
+
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID LSBRACK WHILE
 ##
 ## Ends in an error in state: 85.
@@ -653,7 +666,7 @@ compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK MINUSMINUS
 ##
 ## Ends in an error in state: 89.
 ##
-## expr -> MINUSMINUS . l_value [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
+## expr -> MINUSMINUS . expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
 ## The known suffix of the stack is as follows:
 ## MINUSMINUS
@@ -663,7 +676,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK MINUS WHILE
 ##
-## Ends in an error in state: 91.
+## Ends in an error in state: 90.
 ##
 ## expr -> MINUS . expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
@@ -675,7 +688,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK LRBRACK WHILE
 ##
-## Ends in an error in state: 92.
+## Ends in an error in state: 91.
 ##
 ## expr -> LRBRACK . expr RRBRACK [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
@@ -687,7 +700,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID WHILE
 ##
-## Ends in an error in state: 93.
+## Ends in an error in state: 92.
 ##
 ## expr -> ID . LRBRACK loption(separated_nonempty_list(COMMA,expr)) RRBRACK [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ## l_value -> ID . [ TIMES TASSIGN SEMICOLON RSBRACK RRBRACK PLUSPLUS PLUS PASSIGN OR NEQ MODASSIGN MOD MINUSMINUS MINUS MINASSIGN LESS LEQ GREATER GEQ EQUAL DIV DASSIGN COMMA ASSIGN AND ]
@@ -701,7 +714,7 @@ Expected ";".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID LRBRACK WHILE
 ##
-## Ends in an error in state: 94.
+## Ends in an error in state: 93.
 ##
 ## expr -> ID LRBRACK . loption(separated_nonempty_list(COMMA,expr)) RRBRACK [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
@@ -713,7 +726,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID LSBRACK ID RSBRACK WHILE
 ##
-## Ends in an error in state: 98.
+## Ends in an error in state: 97.
 ##
 ## expr -> l_value . ASSIGN expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ## expr -> l_value . PASSIGN expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
@@ -733,7 +746,7 @@ Expected ";".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID TASSIGN WHILE
 ##
-## Ends in an error in state: 99.
+## Ends in an error in state: 98.
 ##
 ## expr -> l_value TASSIGN . expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
@@ -745,7 +758,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID TASSIGN T_BOOL WHILE
 ##
-## Ends in an error in state: 100.
+## Ends in an error in state: 99.
 ##
 ## expr -> l_value TASSIGN expr . [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ## expr -> expr . PLUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
@@ -770,7 +783,7 @@ Expected ";".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID TIMES WHILE
 ##
-## Ends in an error in state: 101.
+## Ends in an error in state: 100.
 ##
 ## expr -> expr TIMES . expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
@@ -782,7 +795,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID PLUS WHILE
 ##
-## Ends in an error in state: 103.
+## Ends in an error in state: 102.
 ##
 ## expr -> expr PLUS . expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
@@ -794,7 +807,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID PLUS T_BOOL WHILE
 ##
-## Ends in an error in state: 104.
+## Ends in an error in state: 103.
 ##
 ## expr -> expr . PLUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ## expr -> expr PLUS expr . [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
@@ -819,7 +832,7 @@ Expected ";".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID MOD WHILE
 ##
-## Ends in an error in state: 105.
+## Ends in an error in state: 104.
 ##
 ## expr -> expr MOD . expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
@@ -831,7 +844,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID DIV WHILE
 ##
-## Ends in an error in state: 107.
+## Ends in an error in state: 106.
 ##
 ## expr -> expr DIV . expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
@@ -843,7 +856,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID OR WHILE
 ##
-## Ends in an error in state: 109.
+## Ends in an error in state: 108.
 ##
 ## expr -> expr OR . expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
@@ -855,7 +868,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID OR T_BOOL WHILE
 ##
-## Ends in an error in state: 110.
+## Ends in an error in state: 109.
 ##
 ## expr -> expr . PLUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ## expr -> expr . MINUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
@@ -880,7 +893,7 @@ Expected ";".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID NEQ WHILE
 ##
-## Ends in an error in state: 111.
+## Ends in an error in state: 110.
 ##
 ## expr -> expr NEQ . expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
@@ -892,7 +905,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID NEQ T_BOOL WHILE
 ##
-## Ends in an error in state: 112.
+## Ends in an error in state: 111.
 ##
 ## expr -> expr . PLUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ## expr -> expr . MINUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
@@ -917,7 +930,7 @@ Expected ";".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID MINUS WHILE
 ##
-## Ends in an error in state: 113.
+## Ends in an error in state: 112.
 ##
 ## expr -> expr MINUS . expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
@@ -929,7 +942,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID MINUS T_BOOL WHILE
 ##
-## Ends in an error in state: 114.
+## Ends in an error in state: 113.
 ##
 ## expr -> expr . PLUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ## expr -> expr . MINUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
@@ -954,7 +967,7 @@ Expected ";".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID LESS WHILE
 ##
-## Ends in an error in state: 115.
+## Ends in an error in state: 114.
 ##
 ## expr -> expr LESS . expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
@@ -966,7 +979,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID LESS T_BOOL WHILE
 ##
-## Ends in an error in state: 116.
+## Ends in an error in state: 115.
 ##
 ## expr -> expr . PLUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ## expr -> expr . MINUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
@@ -991,7 +1004,7 @@ Expected ";".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID LEQ WHILE
 ##
-## Ends in an error in state: 117.
+## Ends in an error in state: 116.
 ##
 ## expr -> expr LEQ . expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
@@ -1003,7 +1016,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID LEQ T_BOOL WHILE
 ##
-## Ends in an error in state: 118.
+## Ends in an error in state: 117.
 ##
 ## expr -> expr . PLUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ## expr -> expr . MINUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
@@ -1028,7 +1041,7 @@ Expected ";".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID GREATER WHILE
 ##
-## Ends in an error in state: 119.
+## Ends in an error in state: 118.
 ##
 ## expr -> expr GREATER . expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
@@ -1040,7 +1053,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID GREATER T_BOOL WHILE
 ##
-## Ends in an error in state: 120.
+## Ends in an error in state: 119.
 ##
 ## expr -> expr . PLUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ## expr -> expr . MINUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
@@ -1065,7 +1078,7 @@ Expected ";".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID GEQ WHILE
 ##
-## Ends in an error in state: 121.
+## Ends in an error in state: 120.
 ##
 ## expr -> expr GEQ . expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
@@ -1077,7 +1090,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID GEQ T_BOOL WHILE
 ##
-## Ends in an error in state: 122.
+## Ends in an error in state: 121.
 ##
 ## expr -> expr . PLUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ## expr -> expr . MINUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
@@ -1102,7 +1115,7 @@ Expected ";".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID EQUAL WHILE
 ##
-## Ends in an error in state: 123.
+## Ends in an error in state: 122.
 ##
 ## expr -> expr EQUAL . expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
@@ -1114,7 +1127,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID EQUAL T_BOOL WHILE
 ##
-## Ends in an error in state: 124.
+## Ends in an error in state: 123.
 ##
 ## expr -> expr . PLUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ## expr -> expr . MINUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
@@ -1139,7 +1152,7 @@ Expected ";".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID AND WHILE
 ##
-## Ends in an error in state: 125.
+## Ends in an error in state: 124.
 ##
 ## expr -> expr AND . expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
@@ -1151,7 +1164,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID AND T_BOOL WHILE
 ##
-## Ends in an error in state: 126.
+## Ends in an error in state: 125.
 ##
 ## expr -> expr . PLUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ## expr -> expr . MINUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
@@ -1176,7 +1189,7 @@ Expected ";".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID PASSIGN WHILE
 ##
-## Ends in an error in state: 128.
+## Ends in an error in state: 127.
 ##
 ## expr -> l_value PASSIGN . expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
@@ -1188,7 +1201,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID PASSIGN T_BOOL WHILE
 ##
-## Ends in an error in state: 129.
+## Ends in an error in state: 128.
 ##
 ## expr -> l_value PASSIGN expr . [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ## expr -> expr . PLUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
@@ -1213,7 +1226,7 @@ Expected ";".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID MODASSIGN WHILE
 ##
-## Ends in an error in state: 130.
+## Ends in an error in state: 129.
 ##
 ## expr -> l_value MODASSIGN . expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
@@ -1225,7 +1238,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID MODASSIGN T_BOOL WHILE
 ##
-## Ends in an error in state: 131.
+## Ends in an error in state: 130.
 ##
 ## expr -> l_value MODASSIGN expr . [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ## expr -> expr . PLUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
@@ -1250,7 +1263,7 @@ Expected ";".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID MINASSIGN WHILE
 ##
-## Ends in an error in state: 133.
+## Ends in an error in state: 132.
 ##
 ## expr -> l_value MINASSIGN . expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
@@ -1262,7 +1275,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID MINASSIGN T_BOOL WHILE
 ##
-## Ends in an error in state: 134.
+## Ends in an error in state: 133.
 ##
 ## expr -> l_value MINASSIGN expr . [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ## expr -> expr . PLUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
@@ -1287,7 +1300,7 @@ Expected ";".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID DASSIGN WHILE
 ##
-## Ends in an error in state: 135.
+## Ends in an error in state: 134.
 ##
 ## expr -> l_value DASSIGN . expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
@@ -1299,7 +1312,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID DASSIGN T_BOOL WHILE
 ##
-## Ends in an error in state: 136.
+## Ends in an error in state: 135.
 ##
 ## expr -> l_value DASSIGN expr . [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ## expr -> expr . PLUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
@@ -1324,7 +1337,7 @@ Expected ";".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID ASSIGN WHILE
 ##
-## Ends in an error in state: 137.
+## Ends in an error in state: 136.
 ##
 ## expr -> l_value ASSIGN . expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ##
@@ -1336,7 +1349,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID ASSIGN T_BOOL WHILE
 ##
-## Ends in an error in state: 138.
+## Ends in an error in state: 137.
 ##
 ## expr -> l_value ASSIGN expr . [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ## expr -> expr . PLUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
@@ -1361,7 +1374,7 @@ Expected ";".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID LRBRACK ID SEMICOLON
 ##
-## Ends in an error in state: 139.
+## Ends in an error in state: 138.
 ##
 ## expr -> expr . PLUS expr [ TIMES RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ## expr -> expr . MINUS expr [ TIMES RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
@@ -1386,15 +1399,15 @@ compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID LRBRACK
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 93, spurious reduction of production l_value -> ID
-## In state 98, spurious reduction of production expr -> l_value
+## In state 92, spurious reduction of production l_value -> ID
+## In state 97, spurious reduction of production expr -> l_value
 ##
 
 Expected ")".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID LRBRACK ID COMMA WHILE
 ##
-## Ends in an error in state: 140.
+## Ends in an error in state: 139.
 ##
 ## separated_nonempty_list(COMMA,expr) -> expr COMMA . separated_nonempty_list(COMMA,expr) [ RRBRACK ]
 ##
@@ -1406,7 +1419,7 @@ This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK LRBRACK ID SEMICOLON
 ##
-## Ends in an error in state: 142.
+## Ends in an error in state: 141.
 ##
 ## expr -> LRBRACK expr . RRBRACK [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ## expr -> expr . PLUS expr [ TIMES RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV AND ]
@@ -1430,15 +1443,15 @@ compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK LRBRACK ID
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 93, spurious reduction of production l_value -> ID
-## In state 98, spurious reduction of production expr -> l_value
+## In state 92, spurious reduction of production l_value -> ID
+## In state 97, spurious reduction of production expr -> l_value
 ##
 
 Expected ")".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK MINUS T_BOOL WHILE
 ##
-## Ends in an error in state: 144.
+## Ends in an error in state: 143.
 ##
 ## expr -> MINUS expr . [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
 ## expr -> expr . PLUS expr [ TIMES SEMICOLON RSBRACK RRBRACK PLUS OR NEQ MOD MINUS LESS LEQ GREATER GEQ EQUAL DIV COMMA AND ]
@@ -1487,8 +1500,8 @@ compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID LSBRACK
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 93, spurious reduction of production l_value -> ID
-## In state 98, spurious reduction of production expr -> l_value
+## In state 92, spurious reduction of production l_value -> ID
+## In state 97, spurious reduction of production expr -> l_value
 ##
 
 Expected "]".
@@ -1519,8 +1532,8 @@ compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK WHILE LRBR
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 93, spurious reduction of production l_value -> ID
-## In state 98, spurious reduction of production expr -> l_value
+## In state 92, spurious reduction of production l_value -> ID
+## In state 97, spurious reduction of production expr -> l_value
 ##
 
 Expected ")".
@@ -1562,8 +1575,8 @@ compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK RETURN ID 
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 93, spurious reduction of production l_value -> ID
-## In state 98, spurious reduction of production expr -> l_value
+## In state 92, spurious reduction of production l_value -> ID
+## In state 97, spurious reduction of production expr -> l_value
 ## In state 154, spurious reduction of production option(expr) -> expr
 ##
 
@@ -1595,11 +1608,11 @@ compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID RSBRACK
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 93, spurious reduction of production l_value -> ID
-## In state 98, spurious reduction of production expr -> l_value
+## In state 92, spurious reduction of production l_value -> ID
+## In state 97, spurious reduction of production expr -> l_value
 ##
 
-Expected ";".
+Expected "[".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK LCBRACK VOID
 ##
@@ -1697,8 +1710,8 @@ compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK IF LRBRACK
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 93, spurious reduction of production l_value -> ID
-## In state 98, spurious reduction of production expr -> l_value
+## In state 92, spurious reduction of production l_value -> ID
+## In state 97, spurious reduction of production expr -> l_value
 ##
 
 Expected ")".
@@ -1753,8 +1766,8 @@ compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK FOR LRBRAC
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 93, spurious reduction of production l_value -> ID
-## In state 98, spurious reduction of production expr -> l_value
+## In state 92, spurious reduction of production l_value -> ID
+## In state 97, spurious reduction of production expr -> l_value
 ## In state 154, spurious reduction of production option(expr) -> expr
 ##
 
@@ -1785,8 +1798,8 @@ compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK FOR LRBRAC
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 93, spurious reduction of production l_value -> ID
-## In state 98, spurious reduction of production expr -> l_value
+## In state 92, spurious reduction of production l_value -> ID
+## In state 97, spurious reduction of production expr -> l_value
 ## In state 154, spurious reduction of production option(expr) -> expr
 ##
 
@@ -1802,7 +1815,7 @@ compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK FOR LRBRAC
 ## FOR LRBRACK option(expr) SEMICOLON option(expr) SEMICOLON
 ##
 
-This identifier is a reserved keyword and cannot be used as a variable name.
+Not a valid keyword.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK FOR LRBRACK SEMICOLON SEMICOLON ID SEMICOLON
 ##
@@ -1817,8 +1830,8 @@ compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK FOR LRBRAC
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 93, spurious reduction of production l_value -> ID
-## In state 98, spurious reduction of production expr -> l_value
+## In state 92, spurious reduction of production l_value -> ID
+## In state 97, spurious reduction of production expr -> l_value
 ## In state 154, spurious reduction of production option(expr) -> expr
 ##
 
@@ -1858,7 +1871,7 @@ compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK DO SEMICOL
 ## DO stmt
 ##
 
-Not a valid keyword.
+This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK DO SEMICOLON WHILE WHILE
 ##
@@ -1870,7 +1883,7 @@ compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK DO SEMICOL
 ## DO stmt WHILE
 ##
 
-Expected "(".
+This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK DO SEMICOLON WHILE LRBRACK WHILE
 ##
@@ -1910,11 +1923,11 @@ compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK DO SEMICOL
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 93, spurious reduction of production l_value -> ID
-## In state 98, spurious reduction of production expr -> l_value
+## In state 92, spurious reduction of production l_value -> ID
+## In state 97, spurious reduction of production expr -> l_value
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Expected ")".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK DO SEMICOLON WHILE LRBRACK ID RRBRACK WHILE
 ##
@@ -1941,8 +1954,8 @@ compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID RRBRACK
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 93, spurious reduction of production l_value -> ID
-## In state 98, spurious reduction of production expr -> l_value
+## In state 92, spurious reduction of production l_value -> ID
+## In state 97, spurious reduction of production expr -> l_value
 ## In state 154, spurious reduction of production option(expr) -> expr
 ##
 
