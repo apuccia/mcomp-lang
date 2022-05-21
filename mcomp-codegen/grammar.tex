@@ -1,95 +1,113 @@
-<compilation_unit> ::= <top_declaration>* EOF
+\setlength{\grammarindent}{\grammaxindent}
+\begin{obeliskgrammar}
+<\compilationUNDERSCOREunit{}> \gramdef{} \gramstar{\topUNDERSCOREdeclaration*{}}
+                                          \EOF*{}
 
-<top_declaration> ::= 'interface' ID '{' <i_member_declaration>+ '}'
-                    | 'component' ID [<provide_clause>] [<use_clause>] '{'
-                      <c_member_declaration>+ '}'
-                    | 'connect' <link>
-                    | 'connect' '{' <link>* '}'
+<\topUNDERSCOREdeclaration{}> \gramdef{} interface \ID*{} \LCBRACK*{}
+                                         \gramplus{\iUNDERSCOREmemberUNDERSCOREdeclaration*{}}
+                                         \RCBRACK*{}
+  \grambar component \ID*{} \gramopt{\provideUNDERSCOREclause*{}}
+           \gramopt{\useUNDERSCOREclause*{}} \LCBRACK*{}
+           \gramplus{\cUNDERSCOREmemberUNDERSCOREdeclaration*{}} \RCBRACK*{}
+  \grambar connect \link*{}
+  \grambar connect \LCBRACK*{} \gramstar{\link*{}} \RCBRACK*{}
 
-<link> ::= ID '.' ID '<-' ID '.' ID ';'
+<\link{}> \gramdef{} \ID*{} \DOT*{} \ID*{} \CONN*{} \ID*{} \DOT*{} \ID*{}
+                     \SEMICOLON*{}
 
-<i_member_declaration> ::= 'var' <var_sign> ';'
-                         | <fun_prototype> ';'
+<\iUNDERSCOREmemberUNDERSCOREdeclaration{}> \gramdef{} var
+                                                       \varUNDERSCOREsign*{}
+                                                       \SEMICOLON*{}
+  \grambar \funUNDERSCOREprototype*{} \SEMICOLON*{}
 
-<provide_clause> ::= 'provides' ID (',' ID)*
+<\provideUNDERSCOREclause{}> \gramdef{} provides
+                                        \gramsepnelist{\COMMA*{}}{\ID*{}}
 
-<use_clause> ::= 'uses' ID (',' ID)*
+<\useUNDERSCOREclause{}> \gramdef{} uses \gramsepnelist{\COMMA*{}}{\ID*{}}
 
-<var_sign> ::= ID ':' <type_>
+<\varUNDERSCOREsign{}> \gramdef{} \ID*{} \TYPESIG*{} \typeUNDERSCORE*{}
 
-<fun_prototype> ::= 'def' ID '(' [<var_sign> (',' <var_sign>)*] ')' [':'
-                    <basic_type>]
+<\funUNDERSCOREprototype{}> \gramdef{} def \ID*{} \LRBRACK*{}
+                                       \gramseplist{\COMMA*{}}{\varUNDERSCOREsign*{}}
+                                       \RRBRACK*{} \gramopt*{\TYPESIG*{}
+                                       \basicUNDERSCOREtype*{}}
 
-<c_member_declaration> ::= 'var' <var_sign> ';'
-                         | <fun_declaration>
+<\cUNDERSCOREmemberUNDERSCOREdeclaration{}> \gramdef{} var
+                                                       \varUNDERSCOREsign*{}
+                                                       \SEMICOLON*{}
+  \grambar \funUNDERSCOREdeclaration*{}
 
-<fun_declaration> ::= <fun_prototype> <block>
+<\funUNDERSCOREdeclaration{}> \gramdef{} \funUNDERSCOREprototype*{} \block*{}
 
-<block> ::= '{' <block_content>* '}'
+<\block{}> \gramdef{} \LCBRACK*{} \gramstar{\blockUNDERSCOREcontent*{}}
+                      \RCBRACK*{}
 
-<block_content> ::= <stmt>
-                  | 'var' <var_sign> ';'
+<\blockUNDERSCOREcontent{}> \gramdef{} \stmt*{}
+  \grambar var \varUNDERSCOREsign*{} \SEMICOLON*{}
 
-<type_> ::= <basic_type>
-          | <no_multidim> '[' ']'
-          | <no_multidim> '[' T_INT ']'
-          | '&' <basic_type>
+<\typeUNDERSCORE{}> \gramdef{} \basicUNDERSCOREtype*{}
+  \grambar \noUNDERSCOREmultidim*{} \LSBRACK*{} \RSBRACK*{}
+  \grambar \noUNDERSCOREmultidim*{} \LSBRACK*{} \TUNDERSCOREINT*{}
+           \RSBRACK*{}
+  \grambar \REF*{} \basicUNDERSCOREtype*{}
 
-<no_multidim> ::= <basic_type>
-                | '&' <basic_type>
+<\noUNDERSCOREmultidim{}> \gramdef{} \basicUNDERSCOREtype*{}
+  \grambar \REF*{} \basicUNDERSCOREtype*{}
 
-<basic_type> ::= 'int'
-               | 'float'
-               | 'char'
-               | 'void'
-               | 'bool'
+<\basicUNDERSCOREtype{}> \gramdef{} int
+  \grambar float
+  \grambar char
+  \grambar void
+  \grambar bool
 
-<stmt> ::= 'return' [<expr>] ';'
-         | [<expr>] ';'
-         | <block>
-         | 'while' '(' <expr> ')' <stmt>
-         | 'if' '(' <expr> ')' <stmt> 'else' <stmt>
-         | 'if' '(' <expr> ')' <stmt>
-         | 'for' '(' [<expr>] ';' [<expr>] ';' [<expr>] ')' <stmt>
-         | 'do' <stmt> 'while' '(' <expr> ')' ';'
+<\stmt{}> \gramdef{} return \gramopt{\expr*{}} \SEMICOLON*{}
+  \grambar \gramopt{\expr*{}} \SEMICOLON*{}
+  \grambar \block*{}
+  \grambar while \LRBRACK*{} \expr*{} \RRBRACK*{} \stmt*{}
+  \grambar if \LRBRACK*{} \expr*{} \RRBRACK*{} \stmt*{} else \stmt*{}
+  \grambar if \LRBRACK*{} \expr*{} \RRBRACK*{} \stmt*{}
+  \grambar for \LRBRACK*{} \gramopt{\expr*{}} \SEMICOLON*{}
+           \gramopt{\expr*{}} \SEMICOLON*{} \gramopt{\expr*{}} \RRBRACK*{}
+           \stmt*{}
+  \grambar do \stmt*{} while \LRBRACK*{} \expr*{} \RRBRACK*{} \SEMICOLON*{}
 
-<expr> ::= T_INT
-         | T_FLOAT
-         | T_CHAR
-         | T_BOOL
-         | '(' <expr> ')'
-         | '&' <l_value>
-         | <l_value> '=' <expr>
-         | <l_value> '+=' <expr>
-         | <l_value> '-=' <expr>
-         | <l_value> '*=' <expr>
-         | <l_value> '/=' <expr>
-         | <l_value> '%=' <expr>
-         | '!' <expr>
-         | ID '(' [<expr> (',' <expr>)*] ')'
-         | <l_value>
-         | '-' <expr>
-         | <expr> <bin_op> <expr>
-         | <l_value> '++'
-         | <l_value> '--'
-         | '++' <l_value>
-         | '--' <expr>
+<\expr{}> \gramdef{} \TUNDERSCOREINT*{}
+  \grambar \TUNDERSCOREFLOAT*{}
+  \grambar \TUNDERSCORECHAR*{}
+  \grambar \TUNDERSCOREBOOL*{}
+  \grambar \LRBRACK*{} \expr*{} \RRBRACK*{}
+  \grambar \REF*{} \lUNDERSCOREvalue*{}
+  \grambar \lUNDERSCOREvalue*{} \ASSIGN*{} \expr*{}
+  \grambar \lUNDERSCOREvalue*{} \PASSIGN*{} \expr*{}
+  \grambar \lUNDERSCOREvalue*{} \MINASSIGN*{} \expr*{}
+  \grambar \lUNDERSCOREvalue*{} \TASSIGN*{} \expr*{}
+  \grambar \lUNDERSCOREvalue*{} \DASSIGN*{} \expr*{}
+  \grambar \lUNDERSCOREvalue*{} \MODASSIGN*{} \expr*{}
+  \grambar \NOT*{} \expr*{}
+  \grambar \ID*{} \LRBRACK*{} \gramseplist{\COMMA*{}}{\expr*{}} \RRBRACK*{}
+  \grambar \lUNDERSCOREvalue*{}
+  \grambar \MINUS*{} \expr*{}
+  \grambar \expr*{} \binUNDERSCOREop*{} \expr*{}
+  \grambar \lUNDERSCOREvalue*{} \PLUSPLUS*{}
+  \grambar \lUNDERSCOREvalue*{} \MINUSMINUS*{}
+  \grambar \PLUSPLUS*{} \lUNDERSCOREvalue*{}
+  \grambar \MINUSMINUS*{} \expr*{}
 
-<l_value> ::= ID
-            | ID '[' <expr> ']'
+<\lUNDERSCOREvalue{}> \gramdef{} \ID*{}
+  \grambar \ID*{} \LSBRACK*{} \expr*{} \RSBRACK*{}
 
-<bin_op> ::= '+'
-           | '-'
-           | '*'
-           | '%'
-           | '/'
-           | '&&'
-           | '||'
-           | '<'
-           | '>'
-           | '<='
-           | '>='
-           | '=='
-           | '!='
+<\binUNDERSCOREop{}> \gramdef{} \PLUS*{}
+  \grambar \MINUS*{}
+  \grambar \TIMES*{}
+  \grambar \MOD*{}
+  \grambar \DIV*{}
+  \grambar \AND*{}
+  \grambar \OR*{}
+  \grambar \LESS*{}
+  \grambar \GREATER*{}
+  \grambar \LEQ*{}
+  \grambar \GEQ*{}
+  \grambar \EQUAL*{}
+  \grambar \NEQ*{}
 
-
+\end{obeliskgrammar}
