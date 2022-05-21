@@ -119,7 +119,7 @@ compilation_unit: INTERFACE ID LCBRACK VAR ID TYPESIG BOOL LSBRACK WHILE
 ## no_multidim LSBRACK
 ##
 
-Expected an integer size for array declaration.
+This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: INTERFACE ID LCBRACK VAR ID TYPESIG BOOL LSBRACK T_INT WHILE
 ##
@@ -231,7 +231,7 @@ compilation_unit: INTERFACE ID LCBRACK DEF ID LRBRACK ID TYPESIG BOOL COMMA WHIL
 ## var_sign COMMA
 ##
 
-Expected next argument for function.
+This identifier is a reserved keyword and cannot be used as a name of argument.
 
 compilation_unit: INTERFACE ID LCBRACK DEF ID LRBRACK RRBRACK WHILE
 ##
@@ -636,7 +636,7 @@ compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID LSBRACK
 ## ID LSBRACK
 ##
 
-Expected an integer expression.
+This identifier is a reserved keyword and cannot be used as a variable name.
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK PLUSPLUS WHILE
 ##
@@ -1612,7 +1612,7 @@ compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK ID RSBRACK
 ## In state 97, spurious reduction of production expr -> l_value
 ##
 
-Expected "[".
+Expected ";".
 
 compilation_unit: COMPONENT ID LCBRACK DEF ID LRBRACK RRBRACK LCBRACK LCBRACK VOID
 ##
