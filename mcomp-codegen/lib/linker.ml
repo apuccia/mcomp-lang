@@ -17,16 +17,20 @@ let raise_linking_error msg =
   logger#error "Error: %s" msg;
   raise (LinkingError msg)
 
+(* used to keep track, for each component, the interfaces used and the
+   components that provides them *)
 let linked_interfaces = Hashtbl.create 0
-let comps_globals = Hashtbl.create 0
 
 let check_connection connection components =
   match connection with
   | Link (c1, used, c2, provided) ->
+      (* the linker must ensure that: *)
       (if equal_identifier c1 c2 then
+        (* "c1" and "c2" are the names of two different components *)
          raise_linking_error
            ("Trying to link component " ^ show_identifier c1 ^ " with itself");
        if not (equal_identifier used provided) then
+        (* "used" and "provided" are the same interface. *)
          raise_linking_error
            ("Trying to link using two different interfaces: "
           ^ show_identifier used ^ " and " ^ show_identifier provided);
@@ -36,31 +40,39 @@ let check_connection connection components =
        then raise_linking_error "Interface Prelude can't be linked";
 
        try
-         let c = Hashtbl.find linked_interfaces c1 in
+         let providers = Hashtbl.find linked_interfaces c1 in
          try
-           let _ = Hashtbl.find c used in
+           (* after establishing a connection between 2 components it
+              can't be overwritten *)
+           let _ = Hashtbl.find providers used in
            raise_linking_error "Trying to overwrite a connection"
-         with Not_found -> Hashtbl.add c used c2
+         with Not_found ->
+           (* add c2 into provider interfaces *)
+           Hashtbl.add providers used c2
        with Not_found ->
-         let c = Hashtbl.create 0 in
-         Hashtbl.add c used c2;
-         Hashtbl.add linked_interfaces c1 c);
+         (* first time seeing a link of "c1" *)
+         let providers = Hashtbl.create 0 in
+         Hashtbl.add providers used c2;
+         Hashtbl.add linked_interfaces c1 providers);
 
       List.iter
         (fun x ->
           match x.node with
           | ComponentDecl cd ->
+              (* check that interfaces are specified in "use" clause *)
               if equal_identifier c1 cd.cname && not (List.mem used cd.uses)
               then
                 raise_linking_error
-                  ("Interface " ^ used ^ " is not used by component " ^ c1)
+                  ("Interface " ^ show_identifier used
+                 ^ " is not used by component " ^ show_identifier c1)
               else if
+                (* check that interfaces are specified in "provides" clause *)
                 equal_identifier c2 cd.cname
                 && not (List.mem provided cd.provides)
               then
                 raise_linking_error
-                  ("Interface " ^ provided ^ " is not provided by component "
-                 ^ c2))
+                  ("Interface " ^ show_identifier provided
+                 ^ " is not provided by component " ^ show_identifier c2))
         components
 
 let check_used_interfaces component connections =
@@ -72,8 +84,10 @@ let check_used_interfaces component connections =
             match y with Link (a, _, _, _) -> equal_identifier a cd.cname)
           connections
       in
-      (* -1 because there is also interface Prelude *)
+
+      (* the linker has to ensure that for each component every used interfaces are linked *)
       if List.length filtered_connections != List.length cd.uses - 1 then
+        (* -1 because there is also interface Prelude *)
         raise_linking_error
           ("Not all used interface are linked for component "
          ^ show_identifier cd.cname)
@@ -92,13 +106,7 @@ let rec qualify_component component =
           }
         <@> component.annot
       in
-      let pr =
-        List.filter
-          (fun x -> match x.node with VarDecl _ -> true | _ -> false)
-          cd.definitions
-      in
-      let globals = List.map (fun x -> x.node) pr in
-      Hashtbl.add comps_globals cd.cname globals;
+
       dbg_link (show_component_decl pp_typ comp);
       comp
 
@@ -107,14 +115,19 @@ and qualify_lv lv cname scope =
   | AccVar (id1, id2) ->
       let av =
         if Option.is_some id1 then
-          let h = Hashtbl.find linked_interfaces cname in
-          let q = Hashtbl.find h (Option.get id1) in
+          (* retrieve interfaces used by component *)
+          let ints = Hashtbl.find linked_interfaces cname in
+          (* retrieve the corresponding component that implements
+             the interface defined by "id1" *)
+          let q = Hashtbl.find ints (Option.get id1) in
           AccVar (Some q, id2) <@> lv.annot
         else
           try
             let _ = lookup id2 scope in
             AccVar (None, id2) <@> lv.annot
-          with NotFoundEntry _ -> AccVar (Some cname, id2) <@> lv.annot
+          with NotFoundEntry _ ->
+            (* global variable *)
+            AccVar (Some cname, id2) <@> lv.annot
       in
 
       dbg_link (show_lvalue pp_typ av);
@@ -124,6 +137,7 @@ and qualify_lv lv cname scope =
         AccIndex (qualify_lv lv' cname scope, qualify_expr e cname scope)
         <@> lv.annot
       in
+
       dbg_link (show_lvalue pp_typ ai);
       ai
 
@@ -131,6 +145,7 @@ and qualify_expr e cname scope =
   match e.node with
   | LV lv ->
       let lv' = LV (qualify_lv lv cname scope) <@> e.annot in
+
       dbg_link (show_expr pp_typ lv');
       lv'
   | Assign (lv, e) ->
@@ -138,19 +153,23 @@ and qualify_expr e cname scope =
         Assign (qualify_lv lv cname scope, qualify_expr e cname scope)
         <@> e.annot
       in
+
       dbg_link (show_expr pp_typ a);
       a
   | ILiteral _ | CLiteral _ | BLiteral _ | FLiteral _ -> e
   | UnaryOp (op, e) ->
       let uo = UnaryOp (op, qualify_expr e cname scope) <@> e.annot in
+
       dbg_link (show_expr pp_typ uo);
       uo
   | DoubleOp (op, lv) ->
       let dop = DoubleOp (op, qualify_lv lv cname scope) <@> e.annot in
+
       dbg_link (show_expr pp_typ dop);
       dop
   | Address lv ->
       let a = Address (qualify_lv lv cname scope) <@> e.annot in
+
       dbg_link (show_expr pp_typ a);
       a
   | BinaryOp (op, e1, e2) ->
@@ -158,24 +177,23 @@ and qualify_expr e cname scope =
         BinaryOp (op, qualify_expr e1 cname scope, qualify_expr e2 cname scope)
         <@> e.annot
       in
+
       dbg_link (show_expr pp_typ bo);
       bo
   | Call (id1, id2, el) ->
+      let args_list = List.map (fun x -> qualify_expr x cname scope) el in
       let c =
         if Option.is_some id1 then
           let id1 = Option.get id1 in
           if not (equal_identifier id1 "Prelude") then
-            let h = Hashtbl.find linked_interfaces cname in
-            let q = Hashtbl.find h id1 in
-            Call (Some q, id2, List.map (fun x -> qualify_expr x cname scope) el)
-            <@> e.annot
-          else
-            Call
-              (Some id1, id2, List.map (fun x -> qualify_expr x cname scope) el)
-            <@> e.annot
-        else
-          Call (id1, id2, List.map (fun x -> qualify_expr x cname scope) el)
-          <@> e.annot
+            (* retrieve interfaces used by component *)
+            let ints = Hashtbl.find linked_interfaces cname in
+            (* retrieve the corresponding component that implements
+               the interface defined by "id1" *)
+            let q = Hashtbl.find ints id1 in
+            Call (Some q, id2, args_list) <@> e.annot
+          else Call (Some id1, id2, args_list) <@> e.annot
+        else Call (id1, id2, args_list) <@> e.annot
       in
 
       dbg_link (show_expr pp_typ c);
@@ -264,6 +282,7 @@ and qualify_definition definition cname =
         <@> definition.annot
       in
       end_block fscope |> ignore;
+
       dbg_link (show_member_decl pp_typ fd');
       fd'
   | _ -> definition

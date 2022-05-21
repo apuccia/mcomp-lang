@@ -8,6 +8,8 @@ let logger =
   Logging.make_logger "Code generation" Logging.Debug [ cli_h; file_h ]
 
 let dbg_llvalue msg llv = logger#debug "%s\n%s" msg (Llvm.string_of_llvalue llv)
+
+(* operator used to mangle global names *)
 let ( ++ ) cname id = "__" ^ cname ^ "_" ^ id
 let ll_context = Llvm.global_context ()
 let ll_module = Llvm.create_module ll_context "mcomp-lang"
@@ -30,7 +32,7 @@ let rec to_llvm_type t =
       Llvm.function_type (to_llvm_type rtype)
         (Array.of_list (List.map (fun x -> to_llvm_type x) args))
   | TVoid -> ll_voidtype
-  | _ -> failwith "impossible case"
+  | _ -> assert false
 
 let rec get_default_v t =
   match t with
@@ -42,28 +44,28 @@ let rec get_default_v t =
       Llvm.const_array (to_llvm_type t')
         (Array.make (Option.get s) (get_default_v t'))
   | TRef _ -> Llvm.const_pointer_null (to_llvm_type t)
-  | _ -> failwith "impossible case"
+  | _ -> assert false
 
 let codegen_globals m cname =
   match m.node with
   | FunDecl fd ->
-      let mangled_name =
+      let mangled =
         if equal_identifier fd.fname "main" then fd.fname else cname ++ fd.fname
       in
       (* get function type *)
       let llt_f = to_llvm_type m.annot in
       (* define function *)
-      let llv_f = Llvm.define_function mangled_name llt_f ll_module in
+      let llv_f = Llvm.define_function mangled llt_f ll_module in
 
-      dbg_llvalue ("Define function " ^ mangled_name) llv_f
+      dbg_llvalue ("Define function " ^ mangled) llv_f
   | VarDecl (i, t) ->
-      let mangled_name = cname ++ i in
+      let mangled = cname ++ i in
       (* get initial value *)
       let def_value = get_default_v t in
       (* add to global *)
-      let llv_v = Llvm.define_global mangled_name def_value ll_module in
+      let llv_v = Llvm.define_global mangled def_value ll_module in
 
-      dbg_llvalue ("Define global variable " ^ mangled_name) llv_v
+      dbg_llvalue ("Define global variable " ^ mangled) llv_v
 
 let rec codegen_stmt stmt cname scope llv_f llbuilder =
   match stmt.node with
@@ -146,10 +148,12 @@ let rec codegen_stmt stmt cname scope llv_f llbuilder =
   | Return (Some e) ->
       let llv_e = codegen_expr e cname scope llv_f llbuilder in
       let llv_r = Llvm.build_ret llv_e llbuilder in
+
       dbg_llvalue "Build return (some) instruction" llv_r;
       true
   | Return None ->
       let llv_r = Llvm.build_ret_void llbuilder in
+
       dbg_llvalue "Build return (void) instruction" llv_r;
       true
   | Block sl ->
@@ -163,6 +167,7 @@ let rec codegen_stmt stmt cname scope llv_f llbuilder =
             codegen_stmt_ordec s cname block_scope llv_f llbuilder || ret)
           false sl
       in
+
       end_block block_scope |> ignore;
       has_return
   | Skip -> false
@@ -181,6 +186,7 @@ and codegen_lv lv cname scope llv_f llbuilder to_load get_addr =
             let llv_ref = Llvm.build_load llv_lv "" llbuilder in
             if to_load then (
               let llv_deref = Llvm.build_load llv_ref "" llbuilder in
+
               dbg_llvalue "Dereferencing" llv_deref;
               llv_deref)
             else (
@@ -192,11 +198,13 @@ and codegen_lv lv cname scope llv_f llbuilder to_load get_addr =
               [| Llvm.const_int ll_i32type 0; Llvm.const_int ll_i32type 0 |]
               "" llbuilder
           in
+
           dbg_llvalue "Load address of array first element" llv_aea;
           llv_aea
       | _ ->
           if to_load then (
             let llv_e = Llvm.build_load llv_lv "" llbuilder in
+
             dbg_llvalue "Accessing basic type var" llv_e;
             llv_e)
           else llv_lv)
@@ -210,8 +218,8 @@ and codegen_lv lv cname scope llv_f llbuilder to_load get_addr =
             if Option.is_none id1 then lookup id2 scope
             else
               Llvm.lookup_global (Option.get id1 ++ id2) ll_module |> Option.get
-        | _ -> failwith "impossible case"
         (* no multi-dim arrays *)
+        | _ -> assert false
       in
       match lv.annot with
       | TArray (TRef _, Some _) ->
@@ -221,12 +229,14 @@ and codegen_lv lv cname scope llv_f llbuilder to_load get_addr =
               [| Llvm.const_int ll_i32type 0; llv_e |]
               "" llbuilder
           in
+
           if to_load then (
             (* dereference *)
             let llv_ref = Llvm.build_load llv_aea "" llbuilder in
             dbg_llvalue "Loading reference" llv_ref;
             let llv_deref = Llvm.build_load llv_ref "" llbuilder in
             dbg_llvalue "Deref" llv_deref;
+
             llv_deref)
           else llv_aea
       | TArray (_, Some _) ->
@@ -239,23 +249,26 @@ and codegen_lv lv cname scope llv_f llbuilder to_load get_addr =
           dbg_llvalue "Loading address of array element" llv_aea;
           if to_load then (
             let llv_ae = Llvm.build_load llv_aea "" llbuilder in
+
             dbg_llvalue "Loading array element" llv_ae;
             llv_ae)
           else llv_aea
       | TArray (_, None) | TRef _ ->
-          (* pass array to function or accessing array from function *)
+          (* accessing array from function *)
           let llv_aa = Llvm.build_load llv_lv "" llbuilder in
           (* get address of element *)
           let llv_aea =
             Llvm.build_in_bounds_gep llv_aa [| llv_e |] "" llbuilder
           in
+
           dbg_llvalue "Loading address" llv_aea;
           if to_load then (
             let llv_ae = Llvm.build_load llv_aea "" llbuilder in
+
             dbg_llvalue "Loading element" llv_ae;
             llv_ae)
           else llv_aea
-      | _ -> failwith "impossible case")
+      | _ -> assert false)
 
 and codegen_expr expr cname scope llv_f llbuilder =
   match expr.node with
@@ -266,8 +279,8 @@ and codegen_expr expr cname scope llv_f llbuilder =
       let addr = match e.node with Address _ -> true | _ -> false in
       let llv_e = codegen_expr e cname scope llv_f llbuilder in
       let llv_lv = codegen_lv lv cname scope llv_f llbuilder false addr in
-
       let llv_slv = Llvm.build_store llv_e llv_lv llbuilder in
+
       dbg_llvalue "Build store instruction" llv_slv;
       llv_e
   | CLiteral c -> Llvm.const_int ll_i8type (Char.code c)
@@ -278,10 +291,12 @@ and codegen_expr expr cname scope llv_f llbuilder =
       match op with
       | Neg ->
           let llv_neg = Llvm.build_neg llv_e "temp_neg" llbuilder in
+
           dbg_llvalue "Build neg instruction" llv_neg;
           llv_neg
       | Not ->
           let llv_not = Llvm.build_not llv_e "temp_not" llbuilder in
+
           dbg_llvalue "Build not instruction" llv_not;
           llv_not)
   | DoubleOp (op, lv) -> (
@@ -299,6 +314,7 @@ and codegen_expr expr cname scope llv_f llbuilder =
               (codegen_lv lv cname scope llv_f llbuilder false false)
               llbuilder
           in
+
           dbg_llvalue "Build store i (preincr)" llv_s;
           llv_p1
       | PreIncr, TFloat ->
@@ -313,6 +329,7 @@ and codegen_expr expr cname scope llv_f llbuilder =
               (codegen_lv lv cname scope llv_f llbuilder false false)
               llbuilder
           in
+
           dbg_llvalue "Build store f (preincr)" llv_s;
           llv_p1
       | PreDecr, TInt ->
@@ -327,6 +344,7 @@ and codegen_expr expr cname scope llv_f llbuilder =
               (codegen_lv lv cname scope llv_f llbuilder false false)
               llbuilder
           in
+
           dbg_llvalue "Build store i (predecr)" llv_s;
           llv_m1
       | PreDecr, TFloat ->
@@ -341,6 +359,7 @@ and codegen_expr expr cname scope llv_f llbuilder =
               (codegen_lv lv cname scope llv_f llbuilder false false)
               llbuilder
           in
+
           dbg_llvalue "Build store f (predecr)" llv_s;
           llv_m1
       | PostIncr, TInt ->
@@ -355,6 +374,7 @@ and codegen_expr expr cname scope llv_f llbuilder =
               (codegen_lv lv cname scope llv_f llbuilder false false)
               llbuilder
           in
+
           dbg_llvalue "Build store i (postincr)" llv_s;
           llv_v
       | PostIncr, TFloat ->
@@ -369,6 +389,7 @@ and codegen_expr expr cname scope llv_f llbuilder =
               (codegen_lv lv cname scope llv_f llbuilder false false)
               llbuilder
           in
+
           dbg_llvalue "Build store f (postincr)" llv_s;
           llv_v
       | PostDecr, TInt ->
@@ -383,6 +404,7 @@ and codegen_expr expr cname scope llv_f llbuilder =
               (codegen_lv lv cname scope llv_f llbuilder false false)
               llbuilder
           in
+
           dbg_llvalue "Build store i (postdecr)" llv_s;
           llv_v
       | PostDecr, TFloat ->
@@ -397,9 +419,10 @@ and codegen_expr expr cname scope llv_f llbuilder =
               (codegen_lv lv cname scope llv_f llbuilder false false)
               llbuilder
           in
+
           dbg_llvalue "Build store f (postdecr)" llv_s;
           llv_v
-      | _ -> failwith "impossible case")
+      | _ -> assert false)
   | Address lv -> codegen_lv lv cname scope llv_f llbuilder false true
   | BinaryOp (op, e1, e2) -> (
       match op with
@@ -407,22 +430,22 @@ and codegen_expr expr cname scope llv_f llbuilder =
           let llv_e1 = codegen_expr e1 cname scope llv_f llbuilder in
           (* retrieve block where we finished generating e1 instructions *)
           let llblock_e1 = Llvm.insertion_block llbuilder in
-
           let llblock_t = Llvm.append_block ll_context "and_true" llv_f in
           let llblock_f = Llvm.append_block ll_context "and_false" llv_f in
 
-          (* if e1 is true then jump to "and_true" and start generating
-             instructions to check e2 *)
+          (* if e1 is true then insert instruction to jump to "and_true"
+             and start generating instructions to check e2 *)
           Llvm.build_cond_br llv_e1 llblock_t llblock_f llbuilder |> ignore;
           Llvm.position_at_end llblock_t llbuilder |> ignore;
           let llv_e2 = codegen_expr e2 cname scope llv_f llbuilder in
 
           (* retrieve block where we finished generating e2 instructions *)
           let llblock_e2 = Llvm.insertion_block llbuilder in
-
+          (* insert instruction to jump to "and_false" *)
           Llvm.build_br llblock_f llbuilder |> ignore;
           Llvm.position_at_end llblock_f llbuilder |> ignore;
 
+          (* merge flows *)
           let phi_node = Llvm.build_empty_phi ll_i1type "" llbuilder in
           Llvm.add_incoming (llv_e1, llblock_e1) phi_node;
           Llvm.add_incoming (llv_e2, llblock_e2) phi_node;
@@ -433,22 +456,22 @@ and codegen_expr expr cname scope llv_f llbuilder =
           let llv_e1 = codegen_expr e1 cname scope llv_f llbuilder in
           (* retrieve block where we finished generating e1 instructions *)
           let llblock_e1 = Llvm.insertion_block llbuilder in
-
           let llblock_t = Llvm.append_block ll_context "or_true" llv_f in
           let llblock_f = Llvm.append_block ll_context "or_false" llv_f in
 
-          (* if e1 is false then jump to "or_false" and start generating
-             instructions to check e2 *)
+          (* if e1 is false then insert instruction to jump to "or_false"
+             and start generating instructions to check e2 *)
           Llvm.build_cond_br llv_e1 llblock_t llblock_f llbuilder |> ignore;
           Llvm.position_at_end llblock_f llbuilder |> ignore;
           let llv_e2 = codegen_expr e2 cname scope llv_f llbuilder in
 
           (* retrieve block where we finished generating e2 instructions *)
           let llblock_e2 = Llvm.insertion_block llbuilder in
-
+          (* insert instruction to jump to "or_true" *)
           Llvm.build_br llblock_t llbuilder |> ignore;
           Llvm.position_at_end llblock_t llbuilder |> ignore;
 
+          (* merge flows *)
           let phi_node = Llvm.build_empty_phi ll_i1type "" llbuilder in
           Llvm.add_incoming (llv_e1, llblock_e1) phi_node;
           Llvm.add_incoming (llv_e2, llblock_e2) phi_node;
@@ -458,65 +481,76 @@ and codegen_expr expr cname scope llv_f llbuilder =
       | _ -> (
           let llv_e1 = codegen_expr e1 cname scope llv_f llbuilder in
           let llv_e2 = codegen_expr e2 cname scope llv_f llbuilder in
+
           match (op, e1.annot) with
           | Add, (TInt | TRef TInt) ->
               let llv_iadd =
                 Llvm.build_add llv_e1 llv_e2 "temp_iadd" llbuilder
               in
+
               dbg_llvalue "Build iadd instruction" llv_iadd;
               llv_iadd
           | Add, (TFloat | TRef TFloat) ->
               let llv_fadd =
                 Llvm.build_fadd llv_e1 llv_e2 "temp_fadd" llbuilder
               in
+
               dbg_llvalue "Build fadd instruction" llv_fadd;
               llv_fadd
           | Sub, (TInt | TRef TInt) ->
               let llv_isub =
                 Llvm.build_sub llv_e1 llv_e2 "temp_isub" llbuilder
               in
+
               dbg_llvalue "Build sub instruction" llv_isub;
               llv_isub
           | Sub, (TFloat | TRef TFloat) ->
               let llv_fsub =
                 Llvm.build_fsub llv_e1 llv_e2 "temp_fsub" llbuilder
               in
+
               dbg_llvalue "Build fsub instruction" llv_fsub;
               llv_fsub
           | Mult, (TInt | TRef TInt) ->
               let llv_imul =
                 Llvm.build_mul llv_e1 llv_e2 "temp_imult" llbuilder
               in
+
               dbg_llvalue "Build imult instruction" llv_imul;
               llv_imul
           | Mult, (TFloat | TRef TFloat) ->
               let llv_fmul =
                 Llvm.build_fmul llv_e1 llv_e2 "temp_fmul" llbuilder
               in
+
               dbg_llvalue "Build fmul instruction" llv_fmul;
               llv_fmul
           | Div, (TInt | TRef TInt) ->
               let llv_isdiv =
                 Llvm.build_sdiv llv_e1 llv_e2 "temp_idiv" llbuilder
               in
+
               dbg_llvalue "Build idiv instruction" llv_isdiv;
               llv_isdiv
           | Div, (TFloat | TRef TFloat) ->
               let llv_fdiv =
                 Llvm.build_fdiv llv_e1 llv_e2 "temp_fdiv" llbuilder
               in
+
               dbg_llvalue "Build fdiv instruction" llv_fdiv;
               llv_fdiv
           | Mod, (TInt | TRef TInt) ->
               let llv_isrem =
                 Llvm.build_srem llv_e1 llv_e2 "temp_imod" llbuilder
               in
+
               dbg_llvalue "Build imod instruction" llv_isrem;
               llv_isrem
           | Mod, (TFloat | TRef TFloat) ->
               let llv_fsrem =
                 Llvm.build_frem llv_e1 llv_e2 "temp_fmod" llbuilder
               in
+
               dbg_llvalue "Build fmod instruction" llv_fsrem;
               llv_fsrem
           | Equal, (TInt | TRef TInt | TBool | TRef TBool) ->
@@ -524,6 +558,7 @@ and codegen_expr expr cname scope llv_f llbuilder =
                 Llvm.build_icmp Llvm.Icmp.Eq llv_e1 llv_e2 "temp_iequal"
                   llbuilder
               in
+
               dbg_llvalue "Build iequal instruction" llv_icmp_eq;
               llv_icmp_eq
           | Equal, (TFloat | TRef TFloat) ->
@@ -531,6 +566,7 @@ and codegen_expr expr cname scope llv_f llbuilder =
                 Llvm.build_fcmp Llvm.Fcmp.Oeq llv_e1 llv_e2 "temp_fequal"
                   llbuilder
               in
+
               dbg_llvalue "Build fequal instruction" llv_fcmp_eq;
               llv_fcmp_eq
           | Neq, (TInt | TRef TInt | TBool | TRef TBool) ->
@@ -544,6 +580,7 @@ and codegen_expr expr cname scope llv_f llbuilder =
                 Llvm.build_fcmp Llvm.Fcmp.One llv_e1 llv_e2 "temp_fneq"
                   llbuilder
               in
+
               dbg_llvalue "Build fnequal instruction" llv_fcmp_neq;
               llv_fcmp_neq
           | Less, (TInt | TRef TInt) ->
@@ -551,6 +588,7 @@ and codegen_expr expr cname scope llv_f llbuilder =
                 Llvm.build_icmp Llvm.Icmp.Slt llv_e1 llv_e2 "temp_less"
                   llbuilder
               in
+
               dbg_llvalue "Build iless instruction" llv_icmp_slt;
               llv_icmp_slt
           | Less, (TFloat | TRef TFloat) ->
@@ -558,6 +596,7 @@ and codegen_expr expr cname scope llv_f llbuilder =
                 Llvm.build_fcmp Llvm.Fcmp.Olt llv_e1 llv_e2 "temp_fless"
                   llbuilder
               in
+
               dbg_llvalue "Build fless instruction" llv_fcmp_olt;
               llv_fcmp_olt
           | Leq, (TInt | TRef TInt) ->
@@ -565,6 +604,7 @@ and codegen_expr expr cname scope llv_f llbuilder =
                 Llvm.build_icmp Llvm.Icmp.Sle llv_e1 llv_e2 "temp_ileq"
                   llbuilder
               in
+
               dbg_llvalue "Build i less or equal instruction" llv_icmp_sle;
               llv_icmp_sle
           | Leq, (TFloat | TRef TFloat) ->
@@ -572,6 +612,7 @@ and codegen_expr expr cname scope llv_f llbuilder =
                 Llvm.build_fcmp Llvm.Fcmp.Ole llv_e1 llv_e2 "temp_fleq"
                   llbuilder
               in
+
               dbg_llvalue "Build f less or equal instruction" llv_fcmp_ole;
               llv_fcmp_ole
           | Greater, (TInt | TRef TInt) ->
@@ -579,6 +620,7 @@ and codegen_expr expr cname scope llv_f llbuilder =
                 Llvm.build_icmp Llvm.Icmp.Sgt llv_e1 llv_e2 "temp_igreater"
                   llbuilder
               in
+
               dbg_llvalue "Build igreater instruction" llv_icmp_sgt;
               llv_icmp_sgt
           | Greater, (TFloat | TRef TFloat) ->
@@ -586,6 +628,7 @@ and codegen_expr expr cname scope llv_f llbuilder =
                 Llvm.build_fcmp Llvm.Fcmp.Ogt llv_e1 llv_e2 "temp_fgreater"
                   llbuilder
               in
+
               dbg_llvalue "Build fgreater instruction" llv_fcmp_ogt;
               llv_fcmp_ogt
           | Geq, (TInt | TRef TInt) ->
@@ -593,6 +636,7 @@ and codegen_expr expr cname scope llv_f llbuilder =
                 Llvm.build_icmp Llvm.Icmp.Sge llv_e1 llv_e2 "temp_igeq"
                   llbuilder
               in
+
               dbg_llvalue "Build i greater or equal instruction" llv_icmp_sge;
               llv_icmp_sge
           | Geq, (TFloat | TRef TFloat) ->
@@ -600,21 +644,19 @@ and codegen_expr expr cname scope llv_f llbuilder =
                 Llvm.build_fcmp Llvm.Fcmp.Oge llv_e1 llv_e2 "temp_fgeq"
                   llbuilder
               in
+
               dbg_llvalue "Build f greater or equal instruction" llv_fcmp_oge;
               llv_fcmp_oge
-          | _ ->
-              Printf.printf "%s" (show_typ e1.annot);
-              failwith "impossible caseaaaa"))
+          | _ -> assert false))
   | Call (id1, id2, el) -> (
-      let mangled_name =
+      let mangled =
         if Option.is_some id1 then Option.get id1 ++ id2 else cname ++ id2
       in
-      let llv_ftocall =
-        Llvm.lookup_function mangled_name ll_module |> Option.get
-      in
+      let llv_ftocall = Llvm.lookup_function mangled ll_module |> Option.get in
       let llv_args =
         List.map (fun x -> codegen_expr x cname scope llv_f llbuilder) el
       in
+
       match expr.annot with
       | TVoid ->
           (* if fun return void we cannot provide to the instruction a name *)
@@ -637,6 +679,7 @@ and codegen_stmt_ordec stmt_ordec cname scope llv_f llbuilder =
               (Llvm.const_int ll_i32type size)
               ("alloc_array_" ^ i) llbuilder
           in
+
           dbg_llvalue
             ("Build array alloca instruction for local array " ^ i)
             llv_aa;
@@ -662,21 +705,21 @@ and codegen_stmt_ordec stmt_ordec cname scope llv_f llbuilder =
           let llv_a =
             Llvm.build_alloca (to_llvm_type t) ("alloc_var_" ^ i) llbuilder
           in
+
           dbg_llvalue ("Build alloca instruction for local variable " ^ i) llv_a;
           (* store *)
           let llv_s = Llvm.build_store (get_default_v t) llv_a llbuilder in
+
           dbg_llvalue ("Build store instruction for local variable " ^ i) llv_s;
           add_entry i llv_a scope |> ignore;
           false)
 
 let codegen_body fd cname =
-  let mangled_name =
+  let mangled =
     if equal_identifier fd.fname "main" then fd.fname else cname ++ fd.fname
   in
-
-  let llv_f = Llvm.lookup_function mangled_name ll_module |> Option.get in
+  let llv_f = Llvm.lookup_function mangled ll_module |> Option.get in
   let llbuilder_f = Llvm.builder_at_end ll_context (Llvm.entry_block llv_f) in
-
   let scope = empty_table () |> begin_block in
 
   List.iter2
@@ -684,16 +727,14 @@ let codegen_body fd cname =
       (* alloc parameter and get address *)
       let lli_ba = Llvm.build_alloca (to_llvm_type t) i llbuilder_f in
       dbg_llvalue
-        ("Build alloca instruction for function " ^ mangled_name
-       ^ ", parameter " ^ i)
+        ("Build alloca instruction for function " ^ mangled ^ ", parameter " ^ i)
         lli_ba;
       (* add address to symbol table *)
       add_entry i lli_ba scope |> ignore;
       (* store parameter *)
       let lli_s = Llvm.build_store llv_p lli_ba llbuilder_f in
       dbg_llvalue
-        ("Build store instruction for function " ^ mangled_name ^ ", parameter "
-       ^ i)
+        ("Build store instruction for function " ^ mangled ^ ", parameter " ^ i)
         lli_s)
     fd.formals
     (Array.to_list (Llvm.params llv_f));
@@ -702,6 +743,7 @@ let codegen_body fd cname =
     codegen_stmt (Option.get fd.body) cname scope llv_f llbuilder_f
   in
   end_block scope |> ignore;
+
   (if not has_return then
    (* if generating the body we haven't seen any return stmt
       (or if there is a case where return is in then and not else
@@ -734,6 +776,7 @@ let codegen_body fd cname =
     llv_f
   |> ignore;
 
+  (* delete possible empty blocks (due to skips) *)
   let blocks_to_delete =
     Llvm.fold_left_blocks
       (fun to_delete block ->
