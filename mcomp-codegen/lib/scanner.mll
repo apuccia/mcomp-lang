@@ -363,7 +363,7 @@ and block_comment = parse
       Lexing.new_line lexbuf;
       block_comment lexbuf
     }
-  | "*/" 
+  | "/*" 
     {
       logger#error "Starting a nested comment block";
       raise (Lexing_error (generate_pos lexbuf, 
