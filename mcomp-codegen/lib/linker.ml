@@ -8,7 +8,8 @@ let ( <@> ) n f = { node = n; annot = f }
 
 let logger =
   let file_h = Handlers.File ("Linker", Logging.Debug) in
-  let cli_h = Handlers.Cli Logging.Debug in
+  let cli_h = Handlers.Cli Logging.Info in
+
   Logging.make_logger "Linker" Logging.Debug [ cli_h; file_h ]
 
 let dbg_link msg = logger#debug "\n%s" msg
@@ -26,11 +27,11 @@ let check_connection connection components =
   | Link (c1, used, c2, provided) ->
       (* the linker must ensure that: *)
       (if equal_identifier c1 c2 then
-        (* "c1" and "c2" are the names of two different components *)
+         (* "c1" and "c2" are the names of two different components *)
          raise_linking_error
            ("Trying to link component " ^ show_identifier c1 ^ " with itself");
        if not (equal_identifier used provided) then
-        (* "used" and "provided" are the same interface. *)
+         (* "used" and "provided" are the same interface. *)
          raise_linking_error
            ("Trying to link using two different interfaces: "
           ^ show_identifier used ^ " and " ^ show_identifier provided);

@@ -8,7 +8,7 @@ exception Semantic_error of Location.code_pos * string
 
 let logger =
   let file_h = Handlers.File ("Semantic analysis", Logging.Debug) in
-  let cli_h = Handlers.Cli Logging.Debug in
+  let cli_h = Handlers.Cli Logging.Info in
   Logging.make_logger "Semantic analysis" Logging.Debug [ cli_h; file_h ]
 
 let raise_semantic_error pos msg =

@@ -17,7 +17,7 @@
   
   let logger = 
     let file_h = Handlers.File("Parser", Logging.Debug) in 
-    let cli_h = Handlers.Cli Logging.Debug in
+    let cli_h = Handlers.Cli Logging.Info in
     
     Logging.make_logger "Parser" Logging.Debug [cli_h; file_h]
 

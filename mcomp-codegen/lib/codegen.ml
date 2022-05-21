@@ -4,7 +4,8 @@ open Easy_logging
 
 let logger =
   let file_h = Handlers.File ("Code generation", Logging.Debug) in
-  let cli_h = Handlers.Cli Logging.Debug in
+  let cli_h = Handlers.Cli Logging.Info in
+
   Logging.make_logger "Code generation" Logging.Debug [ cli_h; file_h ]
 
 let dbg_llvalue msg llv = logger#debug "%s\n%s" msg (Llvm.string_of_llvalue llv)
@@ -253,7 +254,7 @@ and codegen_lv lv cname scope llv_f llbuilder to_load get_addr =
             dbg_llvalue "Loading array element" llv_ae;
             llv_ae)
           else llv_aea
-      | TArray (_, None) | TRef _ ->
+      | TArray (_, None) ->
           (* accessing array from function *)
           let llv_aa = Llvm.build_load llv_lv "" llbuilder in
           (* get address of element *)

@@ -70,7 +70,7 @@
 
   let logger = 
     let file_h = Handlers.File("Scanner", Logging.Debug) in 
-    let cli_h = Handlers.Cli Logging.Debug in
+    let cli_h = Handlers.Cli Logging.Info in
     
     Logging.make_logger "Scanner" Logging.Debug [cli_h; file_h]
 }
@@ -136,7 +136,6 @@ rule next_token = parse
           "Identifier " ^ word ^ " exceeding 64 characters length")))
       else (
         logger#info "Recognized identifier ID(%s)" word;
-        
         ID(word))
   }
 | '&'           
