@@ -6,26 +6,22 @@ type action = Parse | Type_check | Link | Dump_llvm_ir | Compile
 
 let action_function outputfile optimize verify_module = function 
   | Parse -> 
-    (* Parsing.parse Scanner.next_token >>  *)
-    Parsing.parse >> 
+    Parsing.parse Scanner.next_token >> 
     Ast.show_located_compilation_unit >>
     Printf.printf "Parsing succeded!\n\n%s\n"
   | Type_check -> 
-    (* Parsing.parse Scanner.next_token >> *)
-    Parsing.parse >>
+    Parsing.parse Scanner.next_token >>
     Semantic_analysis.type_check >> 
     Ast.show_typed_compilation_unit >>
     Printf.printf "Type-check succeded!\n\n%s\n"
   | Link -> 
-    (* Parsing.parse Scanner.next_token >> *)
-    Parsing.parse >>
+    Parsing.parse Scanner.next_token >>
     Semantic_analysis.type_check >> 
     Linker.wire_components >>
     Ast.show_typed_compilation_unit >>
     Printf.printf "Linking succeded!\n\n%s\n"
   | Dump_llvm_ir -> 
-    (* Parsing.parse Scanner.next_token >> *)
-    Parsing.parse >>
+    Parsing.parse Scanner.next_token >>
     Semantic_analysis.type_check >> 
     Linker.wire_components >>
     Codegen.to_llvm_module >>
@@ -33,8 +29,7 @@ let action_function outputfile optimize verify_module = function
     (if optimize then Optimizer.optimize_module else Fun.id) >>
     Llvm.dump_module
   | Compile ->   
-    (* Parsing.parse Scanner.next_token  *)
-    Parsing.parse >>
+    Parsing.parse Scanner.next_token >>
     Semantic_analysis.type_check >> 
     Linker.wire_components >>
     Codegen.to_llvm_module >>

@@ -110,6 +110,7 @@
 %token EOF
 
 /* Precedence and associativity specification */
+/* Lower to highest */
 %nonassoc then_prec
 %nonassoc "else"
 %right "=" "+=" "-=" "*=" "/=" "%="

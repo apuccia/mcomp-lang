@@ -12,18 +12,18 @@ let state checkpoint : int =
   | Some (I.Element (s, _, _, _)) -> I.number s
   | None -> 0
 
-let rec parse_buf lexbuf
+let rec parse_buf next_token lexbuf
     (checkpoint : Location.code_pos Ast.compilation_unit I.checkpoint) =
   match checkpoint with
   | I.InputNeeded _env ->
       (* get next token *)
-      let token = Scanner.next_token lexbuf in
+      let token = next_token lexbuf in
       let startp = lexbuf.lex_start_p and endp = lexbuf.lex_curr_p in
       let checkpoint = I.offer checkpoint (token, startp, endp) in
-      parse_buf lexbuf checkpoint
+      parse_buf next_token lexbuf checkpoint
   | I.Shifting _ | I.AboutToReduce _ ->
       let checkpoint = I.resume checkpoint in
-      parse_buf lexbuf checkpoint
+      parse_buf next_token lexbuf checkpoint
   | I.HandlingError _env ->
       (* get the corresponding message and raise a syntax error *)
       let message = Parser_messages.message (state checkpoint) in
@@ -33,5 +33,5 @@ let rec parse_buf lexbuf
   (* we stop at the first error, so this is never reached *)
   | I.Rejected -> assert false
 
-let parse lexbuf =
-  parse_buf lexbuf (Parser.Incremental.compilation_unit lexbuf.lex_curr_p)
+let parse next_token lexbuf =
+  parse_buf next_token lexbuf (Parser.Incremental.compilation_unit lexbuf.lex_curr_p)

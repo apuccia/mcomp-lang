@@ -44,8 +44,7 @@ let process_source filename =
   try
     let llmodule = 
       lexbuf |>
-      (* Parsing.parse Scanner.next_token |> *)
-      Parsing.parse |>
+      Parsing.parse Scanner.next_token |>
       Semantic_analysis.type_check |>
       Linker.wire_components |>
       Codegen.to_llvm_module

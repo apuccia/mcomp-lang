@@ -20,8 +20,7 @@ let process_source filename =
   let lexbuf = Lexing.from_string ~with_positions:true source in 
   try
     lexbuf |>
-    (* Parsing.parse Scanner.next_token |> *)
-    Parsing.parse |>
+    Parsing.parse Scanner.next_token |>
     Ast.show_located_compilation_unit |> 
     Printf.printf "Parsing succeded!\n\n%s\n"   
   with 
