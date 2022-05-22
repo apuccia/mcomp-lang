@@ -289,13 +289,19 @@ and codegen_expr expr cname scope llv_f llbuilder =
       if b then Llvm.const_int ll_i1type 1 else Llvm.const_int ll_i1type 0
   | UnaryOp (op, e) -> (
       let llv_e = codegen_expr e cname scope llv_f llbuilder in
-      match op with
-      | Neg ->
-          let llv_neg = Llvm.build_neg llv_e "temp_neg" llbuilder in
+      match (op, e.annot) with
+      | Neg, TInt ->
+          let llv_neg = Llvm.build_neg llv_e "temp_ineg" llbuilder in
 
-          dbg_llvalue "Build neg instruction" llv_neg;
+          dbg_llvalue "Build ineg instruction" llv_neg;
           llv_neg
-      | Not ->
+      | Neg, TFloat ->
+          let llv_fneg = Llvm.build_fneg llv_e "temp_fneg" llbuilder in
+
+          dbg_llvalue "Build fneg instruction" llv_fneg;
+          llv_fneg
+      | Neg, _ -> assert false
+      | Not, _ ->
           let llv_not = Llvm.build_not llv_e "temp_not" llbuilder in
 
           dbg_llvalue "Build not instruction" llv_not;
