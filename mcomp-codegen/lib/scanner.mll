@@ -108,7 +108,7 @@ rule next_token = parse
     with Failure _ ->
       raise
         (Lexing_error
-          (generate_pos lexbuf, "Value " ^ inum ^ " overflows/underflows 32 bits"))
+          (generate_pos lexbuf, "Value " ^ inum ^ " is not a valid 32 bits integer"))
 
   }
 | exafloat | digit+'.'digit+ as fnum
@@ -122,7 +122,7 @@ rule next_token = parse
     | Failure _ -> 
       raise 
         (Lexing_error (generate_pos lexbuf,
-          "Value " ^ fnum ^ " is not a valid float"))
+          "Value " ^ fnum ^ " is not a valid 64 bits float"))
   }
 | ''' 
   {

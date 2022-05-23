@@ -78,11 +78,7 @@
   \grambar \LRBRACK*{} \expr*{} \RRBRACK*{}
   \grambar \REF*{} \lUNDERSCOREvalue*{}
   \grambar \lUNDERSCOREvalue*{} \ASSIGN*{} \expr*{}
-  \grambar \lUNDERSCOREvalue*{} \PASSIGN*{} \expr*{}
-  \grambar \lUNDERSCOREvalue*{} \MINASSIGN*{} \expr*{}
-  \grambar \lUNDERSCOREvalue*{} \TASSIGN*{} \expr*{}
-  \grambar \lUNDERSCOREvalue*{} \DASSIGN*{} \expr*{}
-  \grambar \lUNDERSCOREvalue*{} \MODASSIGN*{} \expr*{}
+  \grambar \lUNDERSCOREvalue*{} \abbrUNDERSCOREassign*{} \expr*{}
   \grambar \NOT*{} \expr*{}
   \grambar \ID*{} \LRBRACK*{} \gramseplist{\COMMA*{}}{\expr*{}} \RRBRACK*{}
   \grambar \lUNDERSCOREvalue*{}
@@ -109,5 +105,11 @@
   \grambar \GEQ*{}
   \grambar \EQUAL*{}
   \grambar \NEQ*{}
+
+<\abbrUNDERSCOREassign{}> \gramdef{} \PASSIGN*{}
+  \grambar \MINASSIGN*{}
+  \grambar \TASSIGN*{}
+  \grambar \DASSIGN*{}
+  \grambar \MODASSIGN*{}
 
 \end{obeliskgrammar}
