@@ -74,7 +74,12 @@
     
     Logging.make_logger "Scanner" Logging.Debug [cli_h; file_h]
 
-  let multiple_chars = ref false
+  let check_multiple c is_multiple lexbuf rule = 
+    if is_multiple then (
+      logger#info "Not a single character";
+      raise (Lexing_error (Location.to_lexeme_position lexbuf, "Not a single character between '")))
+    else
+      rule c true lexbuf
 }
 
 (* Declaration of regular expressions *)
@@ -85,9 +90,6 @@ let lower = ['a' - 'z']
 let hexadigit = ['0' - '9' 'a' - 'f' 'A' - 'F']
 let exaint = "0x"hexadigit+
 let exafloat = "0x"hexadigit+"."hexadigit+
-(* \f not supported by OCaml, I use its byte representation *)
-let special = ['\'' '\b' '\t' '\x0c' '\\' '\r' '\n']
-let characters = [^ '\'' '\b' '\x0c' '\t' '\\' '\r' '\n']
 
 (* identifiers starts with a letter or an underscore 
 and then can contain letters, underscore and numbers *)
@@ -122,8 +124,11 @@ rule next_token = parse
         (Lexing_error (generate_pos lexbuf,
           "Value " ^ fnum ^ " is not a valid float"))
   }
-| '\''          
-  { character lexbuf }
+| ''' 
+  {
+    logger#info "Started recognizing character";
+    character ' ' false lexbuf
+  }
 | id as word    
   {
     try
@@ -381,20 +386,46 @@ and block_comment = parse
     { 
       block_comment lexbuf 
     }
-and character = parse 
-  | (characters | special) as c
+and character c is_multiple = parse
+  | '''
     { 
-      if not !multiple_chars then (
-        logger#info "Recognized character literal T_CHAR(%c)" c;
-        multiple_chars := true;
-        T_CHAR(c))
-      else (
-        logger#error "Multiple characters specified";
-        raise (Lexing_error (generate_pos lexbuf, 
-          "Trying to specify more than one character"))
-      )
+      logger#info "Recognized character T_CHAR(%c)" c;
+      T_CHAR(c) 
     }
-  | '\''          
+  | '\\' 'a'
     { 
-      next_token lexbuf 
+      check_multiple '\x07' is_multiple lexbuf character 
+    } 
+  | '\\' 'b'
+    { 
+      check_multiple '\x08' is_multiple lexbuf character 
+    }
+  | '\\' 't'
+    { 
+      check_multiple '\x09' is_multiple lexbuf character 
+    }
+  | '\\' 'n'
+    { 
+      check_multiple '\x0a' is_multiple lexbuf character 
+    }
+  | '\\' 'f'
+    { 
+      check_multiple '\x0c' is_multiple lexbuf character 
+    }
+  | '\\' 'r'
+    { 
+      check_multiple '\x0d' is_multiple lexbuf character 
+    }
+  | '\\' '''        
+    { 
+      check_multiple '\'' is_multiple lexbuf character 
+    }
+  | [^'''] as c'
+    { 
+      check_multiple c' is_multiple lexbuf character 
+    }
+  | _
+    { 
+      logger#error "Character not recognized";
+      raise (Lexing_error((Location.to_lexeme_position lexbuf), "Unrecognized character"))
     }
