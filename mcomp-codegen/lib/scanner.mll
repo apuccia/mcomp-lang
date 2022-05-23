@@ -73,6 +73,8 @@
     let cli_h = Handlers.Cli Logging.Info in
     
     Logging.make_logger "Scanner" Logging.Debug [cli_h; file_h]
+
+  let multiple_chars = ref false
 }
 
 (* Declaration of regular expressions *)
@@ -382,8 +384,15 @@ and block_comment = parse
 and character = parse 
   | (characters | special) as c
     { 
-      logger#info "Recognized character literal T_CHAR(%c)" c;
-      T_CHAR(c)
+      if not !multiple_chars then (
+        logger#info "Recognized character literal T_CHAR(%c)" c;
+        multiple_chars := true;
+        T_CHAR(c))
+      else (
+        logger#error "Multiple characters specified";
+        raise (Lexing_error (generate_pos lexbuf, 
+          "Trying to specify more than one character"))
+      )
     }
   | '\''          
     { 
