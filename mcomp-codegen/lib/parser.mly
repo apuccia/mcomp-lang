@@ -110,7 +110,7 @@
 %token EOF
 
 /* Precedence and associativity specification */
-/* Lower to highest */
+/* Lowest to highest */
 %nonassoc then_prec
 %nonassoc "else"
 %right "=" "+=" "-=" "*=" "/=" "%="
@@ -476,7 +476,7 @@ that receives multidimensional arrays */
     dbg_pos (show_typ a) pos;
     a 
   }
-/* | t = type_ s = delimited("[", T_INT, "]") */
+/* t = type_ s = delimited("[", T_INT, "]") */
 | t = no_multidim s = delimited("[", T_INT, "]")
   { 
     logger#info 
@@ -748,52 +748,12 @@ expr:
     dbg_pos (show_expr_node pp_code_pos a) pos;
     a <@> pos 
   }
-| l = l_value "+=" e = expr
+| l = l_value op = abbr_assign e = expr
   { 
-    logger#info "Reducing: l_value += expr -> expr";
+    logger#info "Reducing: l_value abbr_assign expr -> expr";
 
     let pos = to_code_position $loc in 
-    let a = Assign(l, BinaryOp(Add, LV(l) <@> pos, e) <@> pos) in
-
-    dbg_pos (show_expr_node pp_code_pos a) pos;
-    a <@> pos 
-  }
-| l = l_value "-=" e = expr
-  { 
-    logger#info "Reducing: l_value -= expr -> expr";
-
-    let pos = to_code_position $loc in 
-    let a = Assign(l, BinaryOp(Sub, LV(l) <@> pos, e) <@> pos) in
-
-    dbg_pos (show_expr_node pp_code_pos a) pos;
-    a <@> pos 
-  }
-| l = l_value "*=" e = expr
-  { 
-    logger#info "Reducing: l_value *= expr -> expr";
-
-    let pos = to_code_position $loc in 
-    let a = Assign(l, BinaryOp(Mult, LV(l) <@> pos, e) <@> pos) in
-
-    dbg_pos (show_expr_node pp_code_pos a) pos;
-    a <@> pos 
-  }
-| l = l_value "/=" e = expr
-  { 
-    logger#info "Reducing: l_value /= expr -> expr";
-
-    let pos = to_code_position $loc in 
-    let a = Assign(l, BinaryOp(Div, LV(l) <@> pos, e) <@> pos) in
-
-    dbg_pos (show_expr_node pp_code_pos a) pos;
-    a <@> pos 
-  }
-| l = l_value "%=" e = expr
-  { 
-    logger#info "Reducing: l_value %%= expr -> expr";
-
-    let pos = to_code_position $loc in 
-    let a = Assign(l, BinaryOp(Mod, LV(l) <@> pos, e) <@> pos) in
+    let a = Assign(l, BinaryOp(op, LV(l) <@> pos, e) <@> pos) in
 
     dbg_pos (show_expr_node pp_code_pos a) pos;
     a <@> pos 
@@ -836,7 +796,7 @@ expr:
     dbg_pos (show_expr_node pp_code_pos lv) pos;
     lv <@> pos
   }
-| "-" e = expr/*  %prec minus_prec */
+| "-" e = expr
   { 
     logger#info "Reducing: -expr -> expr";
 
@@ -1008,3 +968,30 @@ l_value:
     Neq 
   }
 ;
+
+%inline abbr_assign:
+| "+="
+  {
+    logger#info "Reducing += -> abbr_assign";
+    Add 
+  }
+| "-="
+  {
+    logger#info "Reducing -= -> abbr_assign";
+    Sub 
+  }
+| "*="
+  {
+    logger#info "Reducing *= -> abbr_assign";
+    Mult 
+  }
+| "/="
+  {
+    logger#info "Reducing /= -> abbr_assign";
+    Div 
+  }
+| "%="
+  {
+    logger#info "Reducing %%= -> abbr_assign";
+    Mod 
+  }
