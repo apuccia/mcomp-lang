@@ -273,9 +273,8 @@ let rec check_exp e cname scope =
           List.iter2
             (fun x y ->
               match (x.annot, y) with
-              | TInt, TInt | TFloat, TFloat | TBool, TBool | TChar, TChar -> ()
+              | t, t' when equal_typ t t' -> ()
               | TRef t, t' when equal_typ t t' -> ()
-              | TRef t, TRef t' when equal_typ t t' -> ()
               | TArray (t, _), TArray (t', _) when equal_typ t t' -> ()
               | _ ->
                   raise_semantic_error pos
