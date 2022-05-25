@@ -1,7 +1,6 @@
 open Ast
 open Symbol_table
 open Easy_logging
-
 module L = Llvm (* module aliasing *)
 
 let logger =
@@ -102,13 +101,15 @@ let rec codegen_stmt stmt cname scope llv_f llbuilder =
       let llblock_cont = L.append_block ll_context "cont" llv_f in
 
       (* jump to cond block *)
-      L.build_br llblock_cond llbuilder |> ignore;
+      let llv_br = L.build_br llblock_cond llbuilder in
+      dbg_llvalue "(While) Jump to cond block" llv_br;
       (* in cond block add e instructions *)
       L.position_at_end llblock_cond llbuilder;
       let llv_e = codegen_expr e cname scope llv_f llbuilder in
 
       (* continue loop or go to cont block according to value of e *)
-      L.build_cond_br llv_e llblock_w llblock_cont llbuilder |> ignore;
+      let llv_br = L.build_cond_br llv_e llblock_w llblock_cont llbuilder in
+      dbg_llvalue "(While) Jump to while block or cont block" llv_br;
 
       (* go to while body and start generating its instructions *)
       L.position_at_end llblock_w llbuilder;
@@ -116,7 +117,9 @@ let rec codegen_stmt stmt cname scope llv_f llbuilder =
 
       (* if there is a return statement in body stop otherwise jump to
          to cond testing *)
-      if not ret then L.build_br llblock_cond llbuilder |> ignore;
+      (if not ret then
+       let llv_br = L.build_br llblock_cond llbuilder in
+       dbg_llvalue "(While) Jump to cond block" llv_br);
 
       (* continue generating at cont block *)
       L.position_at_end llblock_cont llbuilder;
@@ -127,20 +130,24 @@ let rec codegen_stmt stmt cname scope llv_f llbuilder =
       let llblock_cont = L.append_block ll_context "cont" llv_f in
 
       (* jump to dowhile block *)
-      L.build_br llblock_dow llbuilder |> ignore;
+      let llv_br = L.build_br llblock_dow llbuilder in
+      dbg_llvalue "(DoWhile) Jump to do while block" llv_br;
 
       (* in cond block generate e instructions *)
       L.position_at_end llblock_dow llbuilder;
       let ret = codegen_stmt s cname scope llv_f llbuilder in
       (* if there is a return statement in body stop otherwise jump to
          to cond testing *)
-      if not ret then L.build_br llblock_cond llbuilder |> ignore;
+      (if not ret then
+       let llv_br = L.build_br llblock_cond llbuilder in
+       dbg_llvalue "(DoWhile) Jump to cond block" llv_br);
 
       (* in cond block generate e instructions *)
       L.position_at_end llblock_cond llbuilder;
       let llv_e = codegen_expr e cname scope llv_f llbuilder in
       (* continue loop or go to cont block according to value of e *)
-      L.build_cond_br llv_e llblock_dow llblock_cont llbuilder |> ignore;
+      let llv_br = L.build_cond_br llv_e llblock_dow llblock_cont llbuilder in
+      dbg_llvalue "(DoWhile) Jump to do while or cont block" llv_br;
 
       (* continue generating at cont block *)
       L.position_at_end llblock_cont llbuilder;
@@ -148,16 +155,17 @@ let rec codegen_stmt stmt cname scope llv_f llbuilder =
   | Expr e ->
       codegen_expr e cname scope llv_f llbuilder |> ignore;
       false
-  | Return (Some e) ->
-      let llv_e = codegen_expr e cname scope llv_f llbuilder in
-      let llv_r = L.build_ret llv_e llbuilder in
+  | Return e ->
+      (if Option.is_some e then
+       let llv_e = codegen_expr (Option.get e) cname scope llv_f llbuilder in
+       let llv_r = L.build_ret llv_e llbuilder in
 
-      dbg_llvalue "Build return (some) instruction" llv_r;
-      true
-  | Return None ->
-      let llv_r = L.build_ret_void llbuilder in
+       dbg_llvalue "Build return (some) instruction" llv_r
+      else
+        let llv_r = L.build_ret_void llbuilder in
 
-      dbg_llvalue "Build return (void) instruction" llv_r;
+        dbg_llvalue "Build return (void) instruction" llv_r);
+
       true
   | Block sl ->
       (* create new block scope *)
@@ -219,8 +227,7 @@ and codegen_lv lv cname scope llv_f llbuilder to_load get_addr =
         match lv.node with
         | AccVar (id1, id2) ->
             if Option.is_none id1 then lookup id2 scope
-            else
-              L.lookup_global (Option.get id1 ++ id2) ll_module |> Option.get
+            else L.lookup_global (Option.get id1 ++ id2) ll_module |> Option.get
         (* no multi-dim arrays *)
         | _ -> assert false
       in
@@ -260,9 +267,7 @@ and codegen_lv lv cname scope llv_f llbuilder to_load get_addr =
           (* accessing array from function *)
           let llv_aa = L.build_load llv_lv "" llbuilder in
           (* get address of element *)
-          let llv_aea =
-            L.build_in_bounds_gep llv_aa [| llv_e |] "" llbuilder
-          in
+          let llv_aea = L.build_in_bounds_gep llv_aa [| llv_e |] "" llbuilder in
 
           dbg_llvalue "Loading address" llv_aea;
           if to_load then (
@@ -287,8 +292,7 @@ and codegen_expr expr cname scope llv_f llbuilder =
       dbg_llvalue "Build store instruction" llv_slv;
       llv_e
   | CLiteral c -> L.const_int ll_i8type (Char.code c)
-  | BLiteral b ->
-      if b then L.const_int ll_i1type 1 else L.const_int ll_i1type 0
+  | BLiteral b -> if b then L.const_int ll_i1type 1 else L.const_int ll_i1type 0
   | UnaryOp (op, e) -> (
       let llv_e = codegen_expr e cname scope llv_f llbuilder in
       match (op, e.annot) with
@@ -313,9 +317,8 @@ and codegen_expr expr cname scope llv_f llbuilder =
       match (op, expr.annot) with
       | PreIncr, TInt ->
           let llv_p1 =
-            L.build_add llv_v
-              (L.const_int ll_i32type 1)
-              "temp_ipreincr" llbuilder
+            L.build_add llv_v (L.const_int ll_i32type 1) "temp_ipreincr"
+              llbuilder
           in
           dbg_llvalue "Build iadd (preincr)" llv_p1;
           let llv_s =
@@ -343,9 +346,8 @@ and codegen_expr expr cname scope llv_f llbuilder =
           llv_p1
       | PreDecr, TInt ->
           let llv_m1 =
-            L.build_sub llv_v
-              (L.const_int ll_i32type 1)
-              "temp_ipredecr" llbuilder
+            L.build_sub llv_v (L.const_int ll_i32type 1) "temp_ipredecr"
+              llbuilder
           in
           dbg_llvalue "Build isub (predecr)" llv_m1;
           let llv_s =
@@ -373,9 +375,8 @@ and codegen_expr expr cname scope llv_f llbuilder =
           llv_m1
       | PostIncr, TInt ->
           let llv_p1 =
-            L.build_add llv_v
-              (L.const_int ll_i32type 1)
-              "temp_ipostincr" llbuilder
+            L.build_add llv_v (L.const_int ll_i32type 1) "temp_ipostincr"
+              llbuilder
           in
           dbg_llvalue "Build iadd (postincr)" llv_p1;
           let llv_s =
@@ -403,9 +404,8 @@ and codegen_expr expr cname scope llv_f llbuilder =
           llv_v
       | PostDecr, TInt ->
           let llv_m1 =
-            L.build_sub llv_v
-              (L.const_int ll_i32type 1)
-              "temp_ipostdecr" llbuilder
+            L.build_sub llv_v (L.const_int ll_i32type 1) "temp_ipostdecr"
+              llbuilder
           in
           dbg_llvalue "Build iadd (postdecr)" llv_m1;
           let llv_s =
@@ -493,44 +493,32 @@ and codegen_expr expr cname scope llv_f llbuilder =
 
           match (op, e1.annot) with
           | Add, (TInt | TRef TInt) ->
-              let llv_iadd =
-                L.build_add llv_e1 llv_e2 "temp_iadd" llbuilder
-              in
+              let llv_iadd = L.build_add llv_e1 llv_e2 "temp_iadd" llbuilder in
 
               dbg_llvalue "Build iadd instruction" llv_iadd;
               llv_iadd
           | Add, (TFloat | TRef TFloat) ->
-              let llv_fadd =
-                L.build_fadd llv_e1 llv_e2 "temp_fadd" llbuilder
-              in
+              let llv_fadd = L.build_fadd llv_e1 llv_e2 "temp_fadd" llbuilder in
 
               dbg_llvalue "Build fadd instruction" llv_fadd;
               llv_fadd
           | Sub, (TInt | TRef TInt) ->
-              let llv_isub =
-                L.build_sub llv_e1 llv_e2 "temp_isub" llbuilder
-              in
+              let llv_isub = L.build_sub llv_e1 llv_e2 "temp_isub" llbuilder in
 
               dbg_llvalue "Build sub instruction" llv_isub;
               llv_isub
           | Sub, (TFloat | TRef TFloat) ->
-              let llv_fsub =
-                L.build_fsub llv_e1 llv_e2 "temp_fsub" llbuilder
-              in
+              let llv_fsub = L.build_fsub llv_e1 llv_e2 "temp_fsub" llbuilder in
 
               dbg_llvalue "Build fsub instruction" llv_fsub;
               llv_fsub
           | Mult, (TInt | TRef TInt) ->
-              let llv_imul =
-                L.build_mul llv_e1 llv_e2 "temp_imult" llbuilder
-              in
+              let llv_imul = L.build_mul llv_e1 llv_e2 "temp_imult" llbuilder in
 
               dbg_llvalue "Build imult instruction" llv_imul;
               llv_imul
           | Mult, (TFloat | TRef TFloat) ->
-              let llv_fmul =
-                L.build_fmul llv_e1 llv_e2 "temp_fmul" llbuilder
-              in
+              let llv_fmul = L.build_fmul llv_e1 llv_e2 "temp_fmul" llbuilder in
 
               dbg_llvalue "Build fmul instruction" llv_fmul;
               llv_fmul
@@ -542,9 +530,7 @@ and codegen_expr expr cname scope llv_f llbuilder =
               dbg_llvalue "Build idiv instruction" llv_isdiv;
               llv_isdiv
           | Div, (TFloat | TRef TFloat) ->
-              let llv_fdiv =
-                L.build_fdiv llv_e1 llv_e2 "temp_fdiv" llbuilder
-              in
+              let llv_fdiv = L.build_fdiv llv_e1 llv_e2 "temp_fdiv" llbuilder in
 
               dbg_llvalue "Build fdiv instruction" llv_fdiv;
               llv_fdiv
@@ -564,16 +550,14 @@ and codegen_expr expr cname scope llv_f llbuilder =
               llv_fsrem
           | Equal, (TInt | TRef TInt | TBool | TRef TBool) ->
               let llv_icmp_eq =
-                L.build_icmp L.Icmp.Eq llv_e1 llv_e2 "temp_iequal"
-                  llbuilder
+                L.build_icmp L.Icmp.Eq llv_e1 llv_e2 "temp_iequal" llbuilder
               in
 
               dbg_llvalue "Build iequal instruction" llv_icmp_eq;
               llv_icmp_eq
           | Equal, (TFloat | TRef TFloat) ->
               let llv_fcmp_eq =
-                L.build_fcmp L.Fcmp.Oeq llv_e1 llv_e2 "temp_fequal"
-                  llbuilder
+                L.build_fcmp L.Fcmp.Oeq llv_e1 llv_e2 "temp_fequal" llbuilder
               in
 
               dbg_llvalue "Build fequal instruction" llv_fcmp_eq;
@@ -586,78 +570,69 @@ and codegen_expr expr cname scope llv_f llbuilder =
               llv_icmp_ne
           | Neq, (TFloat | TRef TFloat) ->
               let llv_fcmp_neq =
-                L.build_fcmp L.Fcmp.One llv_e1 llv_e2 "temp_fneq"
-                  llbuilder
+                L.build_fcmp L.Fcmp.One llv_e1 llv_e2 "temp_fneq" llbuilder
               in
 
               dbg_llvalue "Build fnequal instruction" llv_fcmp_neq;
               llv_fcmp_neq
           | Less, (TInt | TRef TInt) ->
               let llv_icmp_slt =
-                L.build_icmp L.Icmp.Slt llv_e1 llv_e2 "temp_less"
-                  llbuilder
+                L.build_icmp L.Icmp.Slt llv_e1 llv_e2 "temp_less" llbuilder
               in
 
               dbg_llvalue "Build iless instruction" llv_icmp_slt;
               llv_icmp_slt
           | Less, (TFloat | TRef TFloat) ->
               let llv_fcmp_olt =
-                L.build_fcmp L.Fcmp.Olt llv_e1 llv_e2 "temp_fless"
-                  llbuilder
+                L.build_fcmp L.Fcmp.Olt llv_e1 llv_e2 "temp_fless" llbuilder
               in
 
               dbg_llvalue "Build fless instruction" llv_fcmp_olt;
               llv_fcmp_olt
           | Leq, (TInt | TRef TInt) ->
               let llv_icmp_sle =
-                L.build_icmp L.Icmp.Sle llv_e1 llv_e2 "temp_ileq"
-                  llbuilder
+                L.build_icmp L.Icmp.Sle llv_e1 llv_e2 "temp_ileq" llbuilder
               in
 
               dbg_llvalue "Build i less or equal instruction" llv_icmp_sle;
               llv_icmp_sle
           | Leq, (TFloat | TRef TFloat) ->
               let llv_fcmp_ole =
-                L.build_fcmp L.Fcmp.Ole llv_e1 llv_e2 "temp_fleq"
-                  llbuilder
+                L.build_fcmp L.Fcmp.Ole llv_e1 llv_e2 "temp_fleq" llbuilder
               in
 
               dbg_llvalue "Build f less or equal instruction" llv_fcmp_ole;
               llv_fcmp_ole
           | Greater, (TInt | TRef TInt) ->
               let llv_icmp_sgt =
-                L.build_icmp L.Icmp.Sgt llv_e1 llv_e2 "temp_igreater"
-                  llbuilder
+                L.build_icmp L.Icmp.Sgt llv_e1 llv_e2 "temp_igreater" llbuilder
               in
 
               dbg_llvalue "Build igreater instruction" llv_icmp_sgt;
               llv_icmp_sgt
           | Greater, (TFloat | TRef TFloat) ->
               let llv_fcmp_ogt =
-                L.build_fcmp L.Fcmp.Ogt llv_e1 llv_e2 "temp_fgreater"
-                  llbuilder
+                L.build_fcmp L.Fcmp.Ogt llv_e1 llv_e2 "temp_fgreater" llbuilder
               in
 
               dbg_llvalue "Build fgreater instruction" llv_fcmp_ogt;
               llv_fcmp_ogt
           | Geq, (TInt | TRef TInt) ->
               let llv_icmp_sge =
-                L.build_icmp L.Icmp.Sge llv_e1 llv_e2 "temp_igeq"
-                  llbuilder
+                L.build_icmp L.Icmp.Sge llv_e1 llv_e2 "temp_igeq" llbuilder
               in
 
               dbg_llvalue "Build i greater or equal instruction" llv_icmp_sge;
               llv_icmp_sge
           | Geq, (TFloat | TRef TFloat) ->
               let llv_fcmp_oge =
-                L.build_fcmp L.Fcmp.Oge llv_e1 llv_e2 "temp_fgeq"
-                  llbuilder
+                L.build_fcmp L.Fcmp.Oge llv_e1 llv_e2 "temp_fgeq" llbuilder
               in
 
               dbg_llvalue "Build f greater or equal instruction" llv_fcmp_oge;
               llv_fcmp_oge
           | _ -> assert false))
-  | Call (id1, id2, el) -> (
+  | Call (id1, id2, el) ->
       let mangled =
         if Option.is_some id1 then Option.get id1 ++ id2 else cname ++ id2
       in
@@ -666,13 +641,17 @@ and codegen_expr expr cname scope llv_f llbuilder =
         List.map (fun x -> codegen_expr x cname scope llv_f llbuilder) el
       in
 
-      match expr.annot with
-      | TVoid ->
-          (* if fun return void we cannot provide to the instruction a name *)
-          L.build_call llv_ftocall (Array.of_list llv_args) "" llbuilder
-      | _ ->
-          L.build_call llv_ftocall (Array.of_list llv_args) ("call_" ^ id2)
-            llbuilder)
+      let llv_call =
+        match expr.annot with
+        | TVoid ->
+            (* if fun return void we cannot provide to the instruction a name *)
+            L.build_call llv_ftocall (Array.of_list llv_args) "" llbuilder
+        | _ ->
+            L.build_call llv_ftocall (Array.of_list llv_args) ("call_" ^ id2)
+              llbuilder
+      in
+      dbg_llvalue ("Call function " ^ show_identifier mangled) llv_call;
+      llv_call
 
 and codegen_stmt_ordec stmt_ordec cname scope llv_f llbuilder =
   match stmt_ordec.node with
@@ -702,9 +681,7 @@ and codegen_stmt_ordec stmt_ordec cname scope llv_f llbuilder =
                 llbuilder
             in
             dbg_llvalue "Build gep instruction for array element" llv_ae;
-            let llv_aes =
-              L.build_store (get_default_v t') llv_ae llbuilder
-            in
+            let llv_aes = L.build_store (get_default_v t') llv_ae llbuilder in
             dbg_llvalue "Build store instruction for array element" llv_aes
           done;
 
