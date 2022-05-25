@@ -53,10 +53,7 @@ let compare_mdecl x y =
 
 let check_vardecl v pos =
   match v with
-  | i, TInt -> (i, TInt)
-  | i, TFloat -> (i, TFloat)
-  | i, TBool -> (i, TBool)
-  | i, TChar -> (i, TChar)
+  | i, ((TInt | TFloat | TBool | TChar) as t) -> (i, t)
   | i, TArray (((TInt | TFloat | TBool | TChar | TRef _) as t), s) ->
       if Option.is_none s then
         raise_semantic_error pos "Array declaration needs to have a size";
@@ -390,14 +387,7 @@ and check_binary_op op e1 e2 bo_pos cname scope =
       BinaryOp (op, t_e1, t_e2) <@> t
   | ( _,
       _,
-      Equal,
-      (TRef t | ((TInt | TFloat | TBool) as t)),
-      (TRef t' | ((TInt | TFloat | TBool) as t')) )
-    when equal_typ t t' ->
-      BinaryOp (op, t_e1, t_e2) <@> TBool
-  | ( _,
-      _,
-      Neq,
+      (Equal | Neq),
       (TRef t | ((TInt | TFloat | TBool) as t)),
       (TRef t' | ((TInt | TFloat | TBool) as t')) )
     when equal_typ t t' ->
@@ -726,7 +716,7 @@ let rec check_component_def c interfaces scope =
            ^ clause_name ^ " clause does not exist")
       in
       check_in_clause "uses" uses;
-      check_in_clause "provides" uses;
+      check_in_clause "provides" provides;
 
       (* used to retrieve declarations of the interfaces specified in
          "provide" or "used" clause *)
