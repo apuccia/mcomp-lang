@@ -93,7 +93,7 @@ let exafloat = "0x"hexadigit+"."hexadigit+
 
 (* identifiers starts with a letter or an underscore 
 and then can contain letters, underscore and numbers *)
-let id = (upper | lower)['a' - 'z' 'A' - 'Z' '0' - '9' '_']*
+let id = (upper | lower | '_')['a' - 'z' 'A' - 'Z' '0' - '9' '_']*
 
 (* Declaration of scanner functions *)
 
@@ -117,9 +117,8 @@ rule next_token = parse
       let fnumber = Float.of_string fnum in
 
       logger#info "Recognized float literal T_FLOAT";
-      T_FLOAT(fnumber)
-    with
-    | Failure _ -> 
+      T_FLOAT fnumber
+    with Failure _ -> 
       raise 
         (Lexing_error (generate_pos lexbuf,
           "Value " ^ fnum ^ " is not a valid 64 bits float"))
@@ -390,7 +389,7 @@ and character c is_multiple = parse
   | '''
     { 
       logger#info "Recognized character T_CHAR(%c)" c;
-      T_CHAR(c) 
+      T_CHAR c
     }
   | '\\' 'a'
     { 

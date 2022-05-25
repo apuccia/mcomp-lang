@@ -2,7 +2,6 @@ exception DuplicateEntry of Ast.identifier
 exception NotFoundEntry of Ast.identifier
 
 type 'a t = Dummy | Table of 'a t * (Ast.identifier, 'a) Hashtbl.t
-(* A Dummy type *)
 
 let empty_table () = Table (Dummy, Hashtbl.create 0)
 let begin_block parent_block = Table (parent_block, Hashtbl.create 0)

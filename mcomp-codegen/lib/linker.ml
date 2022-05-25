@@ -152,7 +152,7 @@ and qualify_expr e cname scope =
   | Assign (lv, e) ->
       let a =
         Assign (qualify_lv lv cname scope, qualify_expr e cname scope)
-        <@> e.annot
+        <@> lv.annot
       in
 
       dbg_link (show_expr pp_typ a);

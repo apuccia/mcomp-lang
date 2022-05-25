@@ -25,11 +25,11 @@ let ( <@> ) n f = { node = n; annot = f }
 (* used to keep track of interfaces scopes *)
 let ints_scopes = Hashtbl.create 0
 
-(* used to keep track of used interfaces *)
+(* used to keep track of used interfaces of each component *)
 let used_interfaces = Hashtbl.create 0
 
-(* recover interface name if a component uses a definition
-   of an interface*)
+(* recover interface name if a component uses a declaration
+   of an interface *)
 let get_interface_qualifier cname ide =
   let rec g l =
     match l with
@@ -59,7 +59,7 @@ let check_vardecl v pos =
   | i, TChar -> (i, TChar)
   | i, TArray (((TInt | TFloat | TBool | TChar | TRef _) as t), s) ->
       if Option.is_none s then
-        raise_semantic_error pos "Array declaration need to have a size";
+        raise_semantic_error pos "Array declaration needs to have a size";
 
       let size = Option.get s in
       (* arrays should have a size of at least 1 element *)
@@ -132,7 +132,6 @@ let check_interface_decl i scope =
       in
       end_block iscope |> ignore;
       Hashtbl.add ints_scopes iname iscope;
-
       (* add interface definition to scope *)
       (try add_entry iname (TInterface iname) scope |> ignore
        with DuplicateEntry _ ->
@@ -162,28 +161,20 @@ let rec check_exp e cname scope =
           an assignment, it is automatically dereferenced and
           its type is T
         *)
-        | TInt, (TInt | TRef TInt)
-        | TFloat, (TFloat | TRef TFloat)
-        | TChar, (TChar | TRef TChar)
-        | TBool, (TBool | TRef TBool) ->
+        | ( ((TInt | TFloat | TChar | TBool) as t),
+            (((TInt | TFloat | TChar | TBool) as t') | TRef t') )
+          when equal_typ t t' ->
             Assign (t_lv, t_e) <@> t_lv.annot
         (*
           when a reference x of type T& is on the left hand-side of
           an assignment: if e has type T, the assignment is well typed
         *)
-        | TRef TInt, TInt
-        | TRef TFloat, TFloat
-        | TRef TChar, TChar
-        | TRef TBool, TBool ->
-            Assign (t_lv, t_e) <@> t_lv.annot
+        | TRef t, t' when equal_typ t t' -> Assign (t_lv, t_e) <@> t_lv.annot
         (*
           when a reference x of type T& is on the left hand-side of
           an assignment: if e has type T&, the assignment is well typed
         *)
-        | TRef TInt, TRef TInt
-        | TRef TFloat, TRef TFloat
-        | TRef TChar, TRef TChar
-        | TRef TBool, TRef TBool ->
+        | TRef t, TRef t' when equal_typ t t' ->
             Assign (t_lv, t_e) <@> t_lv.annot
         | (TInt | TFloat | TChar | TBool), _ ->
             raise_semantic_error e'.annot
@@ -285,27 +276,17 @@ let rec check_exp e cname scope =
           List.iter2
             (fun x y ->
               match (x.annot, y) with
-              | TInt, TInt
-              | TFloat, TFloat
-              | TBool, TBool
-              | TChar, TChar
-              | TRef TInt, TInt
-              | TRef TFloat, TFloat
-              | TRef TBool, TBool
-              | TRef TChar, TChar
-              | TRef TInt, TRef TInt
-              | TRef TFloat, TRef TFloat
-              | TRef TChar, TRef TChar
-              | TRef TBool, TRef TBool
-              | TArray (_, _), TArray (_, _) ->
-                  ()
+              | TInt, TInt | TFloat, TFloat | TBool, TBool | TChar, TChar -> ()
+              | TRef t, t' when equal_typ t t' -> ()
+              | TRef t, TRef t' when equal_typ t t' -> ()
+              | TArray (t, _), TArray (t', _) when equal_typ t t' -> ()
               | _ ->
                   raise_semantic_error pos
                     "Arguments with different types wrt declaration of function")
             passed_args typ_args_list
         with Invalid_argument _ ->
           (*
-            function call must provides a number of arguments equals
+            function call must provide a number of arguments equals
             to the parameters of the function
           *)
           raise_semantic_error pos "Missing arguments for the function call"
@@ -400,29 +381,33 @@ and check_binary_op op e1 e2 bo_pos cname scope =
   let t_e2 = check_exp e2 cname scope in
   match (e1.annot, e2.annot, op, t_e1.annot, t_e2.annot) with
   (* correct operations *)
-  | _, _, (Add | Sub | Mult | Div | Mod), (TRef TInt | TInt), (TRef TInt | TInt)
-    ->
-      BinaryOp (op, t_e1, t_e2) <@> TInt
   | ( _,
       _,
       (Add | Sub | Mult | Div | Mod),
-      (TRef TFloat | TFloat),
-      (TRef TFloat | TFloat) ) ->
-      BinaryOp (op, t_e1, t_e2) <@> TFloat
-  | _, _, Equal, (TRef TInt | TInt), (TRef TInt | TInt)
-  | _, _, Equal, (TRef TFloat | TFloat), (TRef TInt | TFloat)
-  | _, _, Equal, (TRef TBool | TBool), (TRef TBool | TBool) ->
+      (TRef t | ((TInt | TFloat) as t)),
+      (TRef t' | ((TInt | TFloat) as t')) )
+    when equal_typ t t' ->
+      BinaryOp (op, t_e1, t_e2) <@> t
+  | ( _,
+      _,
+      Equal,
+      (TRef t | ((TInt | TFloat | TBool) as t)),
+      (TRef t' | ((TInt | TFloat | TBool) as t')) )
+    when equal_typ t t' ->
       BinaryOp (op, t_e1, t_e2) <@> TBool
-  | _, _, Neq, (TRef TInt | TInt), (TRef TInt | TInt)
-  | _, _, Neq, (TRef TFloat | TFloat), (TRef TInt | TFloat)
-  | _, _, Neq, (TRef TBool | TBool), (TRef TBool | TBool) ->
+  | ( _,
+      _,
+      Neq,
+      (TRef t | ((TInt | TFloat | TBool) as t)),
+      (TRef t' | ((TInt | TFloat | TBool) as t')) )
+    when equal_typ t t' ->
       BinaryOp (op, t_e1, t_e2) <@> TBool
-  | _, _, (Less | Leq | Greater | Geq), (TRef TInt | TInt), (TRef TInt | TInt)
   | ( _,
       _,
       (Less | Leq | Greater | Geq),
-      (TRef TFloat | TFloat),
-      (TRef TFloat | TFloat) ) ->
+      (TRef t | ((TInt | TFloat) as t)),
+      (TRef t' | ((TInt | TFloat) as t')) )
+    when equal_typ t t' ->
       BinaryOp (op, t_e1, t_e2) <@> TBool
   | _, _, (And | Or), (TRef TBool | TBool), (TRef TBool | TBool) ->
       BinaryOp (op, t_e1, t_e2) <@> TBool
@@ -569,7 +554,7 @@ let rec check_stmt body cname fscope rtype =
       | Some v ->
           let t_e = check_exp v cname fscope in
 
-          (* only basic type return, if it is a ref it will be dereferenced*)
+          (* only basic type return, if it is a ref it will be dereferenced *)
           if equal_typ t_e.annot r || equal_typ t_e.annot (TRef r) then (
             let t_r = Return (Some t_e) <@> t_e.annot in
 
@@ -901,8 +886,7 @@ let rec check_component_def c interfaces scope =
                 ("Function " ^ show_identifier fd.fname ^ " not defined"))
         | VarDecl (i, _) -> (
             try
-              List.find (fun y -> check_var y i def.annot) definitions
-              |> ignore
+              List.find (fun y -> check_var y i def.annot) definitions |> ignore
             with Not_found ->
               raise_semantic_error c.annot
                 ("Variable " ^ show_identifier i ^ " not defined"))

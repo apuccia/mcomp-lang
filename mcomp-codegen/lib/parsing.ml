@@ -7,13 +7,12 @@ module I = Parser.MenhirInterpreter
 let env checkpoint =
   match checkpoint with I.HandlingError env -> env | _ -> assert false
 
-let state checkpoint : int =
+let state checkpoint =
   match I.top (env checkpoint) with
   | Some (I.Element (s, _, _, _)) -> I.number s
   | None -> 0
 
-let rec parse_buf next_token lexbuf
-    (checkpoint : Location.code_pos Ast.compilation_unit I.checkpoint) =
+let rec parse_buf next_token lexbuf checkpoint =
   match checkpoint with
   | I.InputNeeded _env ->
       (* get next token *)

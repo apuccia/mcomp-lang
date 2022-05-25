@@ -172,12 +172,12 @@ top_declaration:
       dbg_pos (show_interface_decl_node pp_code_pos i) pos;
       I (i <@> pos))
     else (
-      let siname = show_identifier iname in
+      let s_iname = show_identifier iname in
 
       logger#error 
-        "Interface %s does not start with a capital letter" siname;
+        "Interface %s does not start with a capital letter" s_iname;
       notation_error $loc(iname)
-        (siname ^ " does not with a capital letter"))
+        (s_iname ^ " does not with a capital letter"))
 	}
 | "component" 
   cname = ID 
@@ -214,12 +214,12 @@ top_declaration:
       dbg_pos (show_component_decl_node pp_code_pos c) pos;
       Comp(c <@> pos))
     else (
-      let scname = show_identifier cname in 
+      let s_cname = show_identifier cname in 
       
       logger#error 
-        "Component %s does not start with a capital letter" scname;
+        "Component %s does not start with a capital letter" s_cname;
       notation_error $loc(cname) 
-        (scname ^ " does not start with a capital letter")
+        (s_cname ^ " does not start with a capital letter")
     )
 	}
 | "connect" l = link
@@ -255,28 +255,28 @@ link:
             dbg_pos (show_connection l) pos;
             l)
           else
-            let sc2_provide = show_identifier c2_provide in
+            let s_c2_provide = show_identifier c2_provide in
 
             logger#error "Interface %s does not start with a capital letter"
-              sc2_provide;
+              s_c2_provide;
             notation_error
-            $loc(c2_provide) (sc2_provide ^ " does not start with a capital letter"))
+            $loc(c2_provide) (s_c2_provide ^ " does not start with a capital letter"))
         else
-          let sc1_use = show_identifier c1_use in
+          let s_c1_use = show_identifier c1_use in
 
-          logger#error "Interface %s does not start with a capital letter" sc1_use;
+          logger#error "Interface %s does not start with a capital letter" s_c1_use;
           notation_error
-          $loc(c1_use) (sc1_use ^ " does not start with a capital letter"))
+          $loc(c1_use) (s_c1_use ^ " does not start with a capital letter"))
       else
-        let sc2 = show_identifier c2 in
+        let s_c2 = show_identifier c2 in
 
-        logger#error "Component %s does not start with a capital letter" sc2;
-        notation_error $loc(c2) (sc2 ^ " does not start with a capital letter"))
+        logger#error "Component %s does not start with a capital letter" s_c2;
+        notation_error $loc(c2) (s_c2 ^ " does not start with a capital letter"))
     else
-      let sc1 = show_identifier c1 in
+      let s_c1 = show_identifier c1 in
 
-      logger#error "Component %s does not start with a capital letter" sc1;
-      notation_error $loc(c1) (sc1 ^ " does not start with a capital letter")
+      logger#error "Component %s does not start with a capital letter" s_c1;
+      notation_error $loc(c1) (s_c1 ^ " does not start with a capital letter")
   }
 ;
 
@@ -334,12 +334,12 @@ var_sign:
       dbg_pos (show_vdecl vd) pos;
       vd)
     else (
-      let sid = show_identifier id in
+      let s_id = show_identifier id in
 
       logger#error 
-        "Variable %s does not start with a lowercase letter" sid;
+        "Variable %s does not start with a lowercase letter" s_id;
       notation_error $loc(id)
-        (sid ^ " does not start with lowercase letter"))
+        (s_id ^ " does not start with lowercase letter"))
   }
 ;
 
@@ -365,12 +365,12 @@ fun_prototype:
       dbg_pos (show_fun_decl pp_code_pos fd) pos;
       fd)
     else (
-      let sid = show_identifier id in
+      let s_id = show_identifier id in
 
       logger#error 
-        "Function %s does not start with a lowercase letter" sid;
+        "Function %s does not start with a lowercase letter" s_id;
       notation_error $loc(id)
-        (sid ^ " does not start with lowercase letter"))
+        (s_id ^ " does not start with lowercase letter"))
 	}
 ;
 
@@ -667,6 +667,7 @@ stmt:
     in
     (* creating final block composed of initialization and while *)
     let b = Block [ stmt_i; stmt_w ] in
+
     dbg_pos (show_stmt_node pp_code_pos b) pos_w;
     b <@> pos_w
   }
@@ -779,12 +780,12 @@ expr:
       dbg_pos (show_expr_node pp_code_pos c) pos;
       c <@> pos)
     else (
-      let sfname = show_identifier fname in 
+      let s_fname = show_identifier fname in 
 
       logger#error 
-        "Function %s does not start with a capital letter" sfname;
+        "Function %s does not start with a capital letter" s_fname;
       notation_error $loc(fname)
-        (sfname ^ " does not start with lowercase letter"))
+        (s_fname ^ " does not start with lowercase letter"))
   }
 | l = l_value
   { 
@@ -875,12 +876,12 @@ l_value:
       dbg_pos (show_lvalue_node pp_code_pos av) pos;
       av <@> pos)
     else (
-      let sid = show_identifier id in 
+      let s_id = show_identifier id in 
 
       logger#error 
-        "Variable %s does not start with a capital letter" sid;
+        "Variable %s does not start with a capital letter" s_id;
       notation_error $loc
-        (sid ^ " does not start with lowercase letter"))
+        (s_id ^ " does not start with lowercase letter"))
   }
 | id = ID "[" e = expr "]"
   {  
@@ -893,12 +894,12 @@ l_value:
       dbg_pos (show_lvalue_node pp_code_pos ai) pos;
       ai <@> pos)
     else (
-      let sid = show_identifier id in 
+      let s_id = show_identifier id in 
 
       logger#error 
-        "Variable %s does not start with a capital letter" sid;
+        "Variable %s does not start with a capital letter" s_id;
       notation_error $loc(id)
-        (sid ^ " does not start with lowercase letter"))
+        (s_id ^ " does not start with lowercase letter"))
 	}
 
 %inline bin_op:
